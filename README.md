@@ -1,6 +1,9 @@
-<img src="https://raw.githubusercontent.com/ktaletsk/pywidget/main/favicon.svg" alt="pywidget logo. Two connected arrows in Python blue and yellow pointing clockwise, symbolizing bidirectional sync between kernel and browser" width="60">
-
-# pywidget
+<h1>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ktaletsk/pywidget/main/favicon.svg" alt="pywidget logo. Two connected arrows in Python blue and yellow pointing clockwise, symbolizing bidirectional sync between kernel and browser" width="60">
+  <br>pywidget
+</p>
+</h1>
 
 Write Jupyter widgets **entirely** in Python — no JavaScript required.
 
