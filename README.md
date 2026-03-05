@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/ktaletsk/pywidget/main/favicon.svg" alt="pywidget logo. Two connected arrows in Python blue and yellow pointing clockwise, symbolizing bidirectional sync between kernel and browser" width="60">
+
 # pywidget
 
 Write Jupyter widgets **entirely** in Python — no JavaScript required.
@@ -8,7 +10,7 @@ runs in the browser via [Pyodide](https://pyodide.org/) (CPython compiled to
 WebAssembly) and syncs state bidirectionally with the kernel through
 [anywidget](https://anywidget.dev/).
 
-Works with **Jupyter Lab**, **Jupyter Notebook**, and **[marimo](https://marimo.io/)**.
+Runs anywhere [anywidget](https://anywidget.dev/) runs — Jupyter Lab, Jupyter Notebook, [marimo](https://marimo.io/), and more.
 
 ### Why pywidget?
 
