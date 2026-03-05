@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+.env
+
+# Editor / OS
+.DS_Store
+.claude/
