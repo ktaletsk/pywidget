@@ -1,3 +1,6 @@
+# /// script
+# dependencies = ["pywidget", "anywidget"]
+# ///
 import marimo
 
 __generated_with = "0.20.4"
