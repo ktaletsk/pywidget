@@ -1,0 +1,9 @@
+name: pywidget-demo
+channels:
+  - emscripten-forge
+  - conda-forge
+dependencies:
+  - xeus-python
+  - pip:
+    - anywidget
+    - pywidget
