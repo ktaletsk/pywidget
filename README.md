@@ -3,6 +3,22 @@
   <img src="https://raw.githubusercontent.com/ktaletsk/pywidget/main/favicon.svg" alt="pywidget logo. Two connected arrows in Python blue and yellow pointing clockwise, symbolizing bidirectional sync between kernel and browser" width="60">
   <br>pywidget
 </p>
+<samp>
+  <p align="center">
+      <a href="https://notebook.link/github/ktaletsk/pywidget/commit/19ebdd786a99ddf6426c3a63206e2f6011e623d2/lab/?path=examples%2Fpywidget_demo.ipynb">
+        <img src="https://img.shields.io/badge/notebook-link-e2d610?logo=jupyter&logoColor=white" alt="pywidget on notebook.link">
+      </a>
+        <a href="https://marimo.app/?src=https%3A%2F%2Fraw.githubusercontent.com%2Fktaletsk%2Fpywidget%2Frefs%2Fheads%2Fmain%2Fexamples%2Fpywidget_marimo_demo.py">
+        <img src="https://marimo.io/shield.svg" alt="Open in marimo">
+      </a>
+        <a href="https://molab.marimo.io/github/ktaletsk/pywidget/blob/main/examples/pywidget_marimo_demo.py">
+        <img src="https://marimo.io/molab-shield.svg" alt="Open in molab">
+      </a>
+        <a href="https://mybinder.org/v2/gh/ktaletsk/pywidget/main?labpath=examples%2Fpywidget_demo.ipynb">
+        <img src="https://mybinder.org/badge_logo.svg" alt="Launch on Binder">
+      </a>
+  </p>
+</samp>
 </h1>
 
 Write Jupyter widgets **entirely** in Python — no JavaScript required.
@@ -14,16 +30,6 @@ WebAssembly) and syncs state bidirectionally with the kernel through
 [anywidget](https://anywidget.dev/).
 
 Runs anywhere [anywidget](https://anywidget.dev/) runs — Jupyter Lab, Jupyter Notebook, [marimo](https://marimo.io/), and more.
-
-<p align="center">
-  <a href="https://notebook.link/github/ktaletsk/pywidget/commit/19ebdd786a99ddf6426c3a63206e2f6011e623d2/lab/?path=examples%2Fpywidget_demo.ipynb">
-    <img src="https://img.shields.io/badge/notebook-link-e2d610?logo=jupyter&logoColor=white" alt="pywidget on notebook.link">
-  </a>
-  &nbsp;
-  <a href="https://marimo.app/?src=https%3A%2F%2Fraw.githubusercontent.com%2Fktaletsk%2Fpywidget%2Frefs%2Fheads%2Fmain%2Fexamples%2Fpywidget_marimo_demo.py">
-    <img src="https://img.shields.io/badge/Open_in-marimo-1C7C54" alt="Open in marimo">
-  </a>
-</p>
 
 ### Why pywidget?
 
