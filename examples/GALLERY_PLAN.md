@@ -341,6 +341,134 @@ Contact john.doe@clinic.net or call +1 555.123.4567 to confirm.
    approach finds all occurrences. Each one gets its own entry in the
    findings list. The user can uncheck individual occurrences.
 
+### Enhancement: Ollama-assisted PII detection
+
+Regex catches structured PII (emails, SSNs, phone numbers), but it cannot
+catch contextual PII -- names ("Jane Smith", "Dr. Rodriguez"), locations
+("the clinic on 5th Ave"), relationships ("the patient's mother"), ages,
+job titles, or any other identifying detail that requires language
+understanding.
+
+A local LLM running in Ollama solves this. The data flow stays private:
+
+```
+Browser (Pyodide)                   Ollama (localhost:11434)
+┌─────────────────────────┐         ┌────────────────────────┐
+│                         │  fetch  │                        │
+│  Raw text ──────────────────────> │  LLM identifies PII:   │
+│                         │         │  names, locations,     │
+│                         │         │  relationships, etc.   │
+│  <────────────────────────────── │                        │
+│  LLM findings added to  │         └────────────────────────┘
+│  the same checkbox list  │
+│  alongside regex hits    │
+│                         │
+│  User reviews all        │
+│  findings (regex + LLM)  │
+│                         │    traitlet
+│  Submit ─────────────────────────────────> Kernel
+└─────────────────────────┘
+```
+
+The sensitive text goes from browser to `localhost:11434` and back. It
+never leaves the machine. No API key, no cloud.
+
+#### How it works
+
+Phase 2 (auto-detect) gains an additional "Scan with LLM" button alongside
+the existing regex "Scan for PII" button. Clicking it:
+
+1. Reads the raw text from the textarea.
+2. Calls Ollama via `pyodide.http.pyfetch`:
+
+   ```python
+   from pyodide.http import pyfetch
+   import json
+
+   response = await pyfetch(
+       "http://localhost:11434/api/generate",
+       method="POST",
+       headers={"Content-Type": "application/json"},
+       body=json.dumps({
+           "model": "llama3.2",
+           "prompt": (
+               "Identify all personally identifiable information (PII) in "
+               "the following text. Return a JSON array of objects, each "
+               "with 'type' (e.g. PERSON, LOCATION, ORGANIZATION, AGE, "
+               "RELATIONSHIP) and 'value' (the exact text span).\n\n"
+               f"Text:\n{raw_text}\n\nJSON:"
+           ),
+           "stream": False,
+           "format": "json",
+       }),
+   )
+   result = await response.json()
+   ```
+
+3. Parses the LLM's JSON response into findings.
+4. For each LLM finding, locates the `value` substring in the raw text
+   (using `str.find()` or `re.finditer(re.escape(value))`) to get
+   `start`/`end` offsets.
+5. Adds the LLM findings to the same `current_findings` list, tagged with
+   their LLM-provided type (PERSON, LOCATION, etc.) and marked with a
+   different color/style to distinguish from regex hits.
+6. The findings list (checkboxes) and preview update to show both regex
+   and LLM detections.
+
+#### CORS configuration
+
+Ollama's `OLLAMA_ORIGINS` defaults allow `localhost` origins. If the
+notebook is served from a different origin (e.g. `notebook.link`,
+`marimo.app`), the user must configure Ollama to allow it:
+
+```bash
+# macOS
+launchctl setenv OLLAMA_ORIGINS "*"
+
+# Linux (systemd)
+sudo systemctl edit ollama
+# Add: Environment="OLLAMA_ORIGINS=*"
+sudo systemctl daemon-reload && sudo systemctl restart ollama
+```
+
+The widget should detect CORS failures and show a helpful error message
+with these instructions instead of a raw network error.
+
+#### When Ollama is not running
+
+This is an optional enhancement, not a requirement. The widget should
+gracefully handle:
+
+- Ollama not installed: "Scan with LLM" button shows a tooltip explaining
+  the requirement. Regex scanning works independently.
+- Ollama running but model not pulled: show the error from Ollama's
+  response and suggest `ollama pull llama3.2`.
+- CORS rejection: show configuration instructions (see above).
+- Network timeout: show a retry option.
+
+The regex-only flow must always work standalone. Ollama is additive.
+
+#### Open questions (Ollama-specific)
+
+1. **Which model?** `llama3.2` (3B) is a good default -- small, fast,
+   capable enough for NER-style tasks. Should we allow the user to pick a
+   model from a dropdown (populated by `GET /api/tags`)? Or keep it
+   simple with a hardcoded default?
+
+2. **Structured output reliability**: LLMs don't always return valid JSON.
+   Ollama's `"format": "json"` helps but isn't bulletproof. Need a
+   fallback parser that extracts findings even from malformed responses.
+
+3. **Latency**: A 3B model on CPU may take 5-15 seconds for a page of
+   text. Show a spinner/progress indicator. Consider streaming the
+   response to show partial results.
+
+4. **Async in event handler**: The pyfetch call is async. The "Scan with
+   LLM" button handler needs `asyncio.ensure_future()` to schedule the
+   coroutine from a sync click callback. This is the same pattern as
+   the OpenAI example (documented in Open Questions / Risks). Needs
+   testing in pywidget.
+
 ---
 
 ## Example 6: Interactive OpenCV Playground (webcam + browser-side CV)
