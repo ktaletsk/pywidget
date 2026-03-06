@@ -11,65 +11,11 @@ All examples will live in `examples/pywidget_gallery.ipynb` (Jupyter) and
 
 ## Example 1: Mandelbrot Set Explorer
 
-**Concept**: Interactive fractal viewer. NumPy computes the Mandelbrot set,
-Pillow renders it to a PNG, displayed as a base64 `<img>` tag. Controls for
-zoom, center, and iteration count.
-
-**Traitlets**:
-
-- `center_x = Float(-0.5)` — real axis center
-- `center_y = Float(0.0)` — imaginary axis center
-- `zoom = Float(1.0)` — zoom level
-- `max_iter = Int(100)` — max iterations
-- `width = Int(400)`, `height = Int(400)` — image size
-
-**Pyodide packages**: `numpy`, `Pillow`
-
-**Render logic**:
-
-1. Build a complex number grid with NumPy based on center/zoom.
-2. Run the escape-time iteration (vectorized NumPy).
-3. Map iteration counts to colors (simple colormap using NumPy array math).
-4. Create a `PIL.Image` from the color array, encode to base64 PNG.
-5. Display as `<img>` tag, plus control buttons (zoom in/out, reset) and a
-   max_iter slider.
-6. Click handlers on the image to re-center (using `event.offsetX/offsetY`).
-7. Button clicks update `model.set()` / `model.save_changes()`, which
-   triggers `update()` for a full re-render.
-
-**What this showcases**: Heavy numerical computation (NumPy), image generation
-(Pillow), interactive controls — all running in the browser.
-
----
+DONE
 
 ## Example 2: K-Means Clustering Playground
 
-**Concept**: Click on an SVG canvas to place data points. scikit-learn runs
-K-Means clustering in the browser. Points are colored by cluster, centroids
-shown as markers.
-
-**Traitlets**:
-
-- `points_json = Unicode('[]')` — JSON array of `{x, y}` objects
-- `n_clusters = Int(3)` — number of clusters
-
-**Pyodide packages**: `numpy`, `scikit-learn`
-
-**Render logic**:
-
-1. Render an SVG element (400x400) with a light background as the "canvas".
-2. Render control bar: cluster count buttons (2–8), clear button, info text.
-3. SVG click handler: append `{x, y}` to the points list, re-render.
-4. When points >= `n_clusters`, run `sklearn.cluster.KMeans` on the point
-   array.
-5. Color each point circle by its cluster label (using a color palette).
-6. Draw centroid markers (larger, different shape — crosses or diamonds).
-7. Show cluster stats below (point count per cluster, inertia).
-
-**What this showcases**: ML training (scikit-learn) running in the browser
-from Python. Interactive data collection + computation loop.
-
----
+DONE
 
 ## Example 3: Markdown Previewer
 
