@@ -1,0 +1,44 @@
+name: Generate example notebooks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "examples/*_mo.py"
+      - "scripts/generate_examples.py"
+      - ".github/workflows/generate-examples.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install generation dependencies
+        run: pip install marimo nbformat anywidget -e .
+
+      - name: Generate notebooks and gallery README
+        run: python scripts/generate_examples.py
+
+      - name: Commit generated files
+        run: |
+          git add examples/*.ipynb examples/README.md
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          GIT_AUTHOR_NAME="github-actions[bot]" \
+          GIT_AUTHOR_EMAIL="41898282+github-actions[bot]@users.noreply.github.com" \
+          GIT_COMMITTER_NAME="github-actions[bot]" \
+          GIT_COMMITTER_EMAIL="41898282+github-actions[bot]@users.noreply.github.com" \
+          git commit -m "chore: regenerate Jupyter notebooks and gallery README"
+          git push
