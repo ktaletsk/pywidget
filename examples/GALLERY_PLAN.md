@@ -343,6 +343,291 @@ Contact john.doe@clinic.net or call +1 555.123.4567 to confirm.
 
 ---
 
+## Example 6: Interactive OpenCV Playground (webcam + browser-side CV)
+
+### Concept
+
+A teaching tool for computer vision. The widget accesses the webcam
+directly in the browser, applies OpenCV filters in real-time via Pyodide,
+and displays the processed feed in a single panel. Students see the effect
+of `cv2.Canny`, `cv2.GaussianBlur`, `cv2.threshold`, etc. on their own
+camera feed instantly. A snapshot button captures the current processed
+frame and sends it to the kernel as a NumPy array for further exploration
+in subsequent notebook cells.
+
+**Use case**: You're writing a CV course or tutorial. Instead of loading
+static images, students point their camera and see each OpenCV operation
+live. They experiment with the filter bar, then snapshot a frame to
+continue working with it as a regular NumPy array in the next cell --
+histogram analysis, feature extraction, cascade classifiers, feeding into
+sklearn, saving to disk, etc.
+
+This is a direct evolution of [this 2018 blog post](https://medium.com/@kostal91/displaying-real-time-webcam-stream-in-ipython-at-relatively-high-framerate-8e67428ac522)
+which fought IPython's display pipeline to show webcam frames at ~36 FPS
+using a kernel-side `cv2.VideoCapture` -> PIL JPEG encode ->
+`IPython.display` -> `clear_output` loop. pywidget eliminates the entire
+kernel round trip:
+
+```
+2018 (kernel-side):
+  webcam -> kernel (cv2.VideoCapture) -> PIL JPEG -> IPython.display -> clear -> repeat
+  bottleneck: kernel <-> frontend network hop per frame
+
+pywidget (browser-side):
+  webcam -> <video> element (getUserMedia, browser-native)
+       -> canvas.drawImage() captures a frame
+       -> NumPy array (in Pyodide WASM)
+       -> cv2 processing (in Pyodide WASM)
+       -> render result to <img>
+  bottleneck: WASM processing only. Zero network hops.
+```
+
+### Pyodide packages
+
+- `opencv-python` (4.11.0, available in Pyodide)
+- `numpy`
+- `Pillow` (for JPEG encoding of processed frames)
+
+### Traitlets (synced to kernel)
+
+The live video stream stays browser-only. Only explicit user actions push
+data to the kernel.
+
+- `snapshot_b64 = Unicode("")` -- base64-encoded JPEG of the last captured
+  processed frame, synced only when the user clicks "Snapshot"
+- `filter_name = Unicode("none")` -- currently selected filter, synced so
+  kernel can read which filter is active
+
+### Browser APIs used
+
+All accessed from Python via `from js import navigator, document`:
+
+- `navigator.mediaDevices.getUserMedia({"video": True})` -- request webcam
+  access (requires HTTPS or localhost; user sees a browser permission
+  prompt)
+- `HTMLVideoElement` -- receives the live camera stream (hidden element)
+- `HTMLCanvasElement` + `getContext("2d")` -- captures individual frames
+  from the video via `drawImage()`, provides `getImageData()` to read
+  pixel data
+- `setInterval` -- drives the processing loop at a target FPS
+
+### Data flow
+
+```
+Browser (Pyodide WASM)
+┌──────────────────────────────────────────────────────┐
+│  getUserMedia()                                      │
+│       │                                              │
+│       v                                              │
+│  <video> element (hidden, receives live stream)      │
+│       │                                              │
+│       v  (on each setInterval tick)                  │
+│  <canvas>.drawImage(video) -- capture frame          │
+│       │                                              │
+│       v                                              │
+│  getImageData() -> Uint8ClampedArray                 │
+│       │                                              │
+│       v                                              │
+│  np.frombuffer(...).reshape(H, W, 4) -- RGBA array   │
+│       │                                              │
+│       v                                              │
+│  cv2 filter (selected by user)                       │
+│       │                                              │
+│       v                                              │
+│  PIL JPEG encode -> data:image/jpeg;base64 -> <img>  │
+│                                                      │
+│  [Snapshot] button ──> model.set("snapshot_b64")     │
+│                        model.save_changes() ───────> │ Kernel
+└──────────────────────────────────────────────────────┘
+```
+
+### Frame capture: getting pixels from video to NumPy
+
+The critical path from `<video>` to a NumPy array:
+
+```python
+from js import navigator, document
+import numpy as np
+
+# One-time setup (in async render)
+video = document.createElement("video")
+stream = await navigator.mediaDevices.getUserMedia(to_js({"video": True}))
+video.srcObject = stream
+await video.play()
+
+# Per-frame capture (in setInterval callback)
+canvas = document.createElement("canvas")
+canvas.width = video.videoWidth
+canvas.height = video.videoHeight
+ctx = canvas.getContext("2d")
+ctx.drawImage(video, 0, 0)
+image_data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+# Convert to numpy -- image_data.data is a Uint8ClampedArray (RGBA)
+rgba = np.frombuffer(image_data.data.to_py(), dtype=np.uint8)
+rgba = rgba.reshape((canvas.height, canvas.width, 4))
+rgb = rgba[:, :, :3]  # drop alpha for OpenCV
+```
+
+**Performance concern**: `image_data.data.to_py()` copies pixel data from
+JS to WASM memory. For a 640x480 frame that's ~1.2 MB per copy. This may
+limit framerate. Possible mitigations:
+- Default to 320x240 (300 KB per frame)
+- When filter is "None" (passthrough), skip the NumPy path entirely and
+  just draw the `<video>` element directly to a visible canvas with
+  `drawImage()` -- no pixel copy needed
+- Only enter the NumPy/OpenCV path when a filter is selected
+
+### Processing filters
+
+Button bar to select a filter. Each filter is a Python function taking an
+RGB NumPy array and returning a processed array:
+
+| Filter             | OpenCV call                                        | Visual effect                |
+|--------------------|----------------------------------------------------|------------------------------|
+| None (passthrough) | skip NumPy entirely, direct canvas draw             | Raw webcam feed              |
+| Grayscale          | `cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)`          | Black & white                |
+| Edge detection     | `cv2.Canny(gray, 100, 200)`                        | White edges on black         |
+| Gaussian blur      | `cv2.GaussianBlur(frame, (15, 15), 0)`             | Soft focus                   |
+| Threshold          | `cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)` | High-contrast B&W            |
+| Cartoon            | bilateral filter + adaptive threshold + edges      | Cartoon/illustration look    |
+
+### Rendering processed frames
+
+Use JPEG encode + data URL (same proven pattern as Mandelbrot example and
+the 2018 blog -- JPEG encoding is ~10x faster than PNG):
+
+```python
+from PIL import Image
+import io, base64
+
+img = Image.fromarray(processed_rgb)
+buf = io.BytesIO()
+img.save(buf, format="JPEG", quality=80)
+data_url = "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+display_img.src = data_url
+```
+
+### UI layout
+
+Single panel -- the feed with the effect applied. No side-by-side.
+
+```
+┌─────────────────────────────────────────────┐
+│  Interactive OpenCV Playground               │
+│                                             │
+│  ┌─────────────────────────────────────┐    │
+│  │                                     │    │
+│  │   Camera feed with active filter    │    │
+│  │   (single <img> or <canvas>)        │    │
+│  │                                     │    │
+│  │                                     │    │
+│  └─────────────────────────────────────┘    │
+│                                             │
+│  [None] [Gray] [Edges] [Blur] [Threshold]   │
+│  [Cartoon]                                  │
+│                                             │
+│  [Start Camera]  [Snapshot to kernel]       │
+│                                             │
+│  FPS: 14.2  |  320x240                      │
+└─────────────────────────────────────────────┘
+```
+
+### Interaction flow
+
+1. Widget renders with a "Start Camera" button and the filter bar
+   (disabled). No webcam access until user clicks (browsers require a
+   user gesture for `getUserMedia`).
+2. User clicks Start. Browser shows permission prompt. On approval, the
+   live feed appears. Filter bar enables.
+3. Processing loop begins via `setInterval`. Each tick: capture frame,
+   apply selected filter, display result. FPS counter updates.
+4. User clicks different filter buttons. The active filter changes
+   immediately. The `filter_name` traitlet syncs to the kernel.
+5. User clicks "Snapshot to kernel":
+   - The current processed frame is encoded as base64 JPEG.
+   - `model.set("snapshot_b64", data)` + `model.save_changes()`.
+   - A brief flash/border effect confirms the capture.
+6. On widget destroy, the stream is stopped (`stream.getTracks()` ->
+   `track.stop()`) to release the camera.
+
+### Kernel-side usage (the teaching payoff)
+
+The widget gives you a frame. What you do with it is your notebook:
+
+```python
+# Cell 1: the widget
+w = WebcamWidget()
+w
+
+# Cell 2: after clicking Snapshot
+import numpy as np
+from PIL import Image
+import base64, io
+
+img_bytes = base64.b64decode(w.snapshot_b64)
+img = Image.open(io.BytesIO(img_bytes))
+frame = np.array(img)
+
+print(f"Captured: {frame.shape}")  # e.g. (240, 320, 3)
+
+# Cell 3: continue with any CV/ML workflow
+import cv2
+
+# Histogram of color channels
+for i, color in enumerate(("b", "g", "r")):
+    hist = cv2.calcHist([frame], [i], None, [256], [0, 256])
+    # ... plot with matplotlib, analyze, etc.
+
+# Or: face detection, contour finding, color segmentation,
+#     feeding into sklearn, saving to disk, etc.
+```
+
+### Async architecture
+
+`getUserMedia()` returns a Promise, so the render function must be async:
+
+```python
+async def render(self, el, model):
+    from js import navigator, document
+    # ...
+    stream = await navigator.mediaDevices.getUserMedia(...)
+```
+
+This works because the bridge (`_bridge.js:168-169`) awaits thenables
+returned by render.
+
+The frame processing loop uses `setInterval` with a `create_proxy`'d
+callback. The callback is a regular sync function (captures one frame,
+processes, displays -- no async needed per tick).
+
+### Open questions
+
+1. **Performance of `to_py()` / `to_js()` for pixel data**: The JS<->WASM
+   memory copy is the likely bottleneck. Benchmark at 320x240 to
+   determine achievable FPS. Passthrough mode (filter=None) should skip
+   NumPy entirely and just use `drawImage` for maximum FPS.
+
+2. **Default resolution**: Start at 320x240 for safety. Optionally offer a
+   resolution toggle (320x240 / 640x480) if performance allows.
+
+3. **HTTPS requirement**: `getUserMedia` requires a secure context (HTTPS
+   or localhost). This works on notebook.link and marimo.app (both HTTPS)
+   and on local Jupyter (localhost). Won't work on plain HTTP. The widget
+   should detect `window.isSecureContext` and show a clear error.
+
+4. **Permission denial**: If the user denies camera access, show a
+   friendly message ("Camera access denied. Click the camera icon in your
+   browser's address bar to allow it.") instead of a raw error.
+
+5. **Cleanup on destroy**: The bridge's cleanup function
+   (`_bridge.js:203`) destroys the Python namespace but the camera stream
+   needs explicit stopping (`track.stop()`). Need to ensure this happens.
+   Options: store the interval ID and stream reference, clear/stop in the
+   cleanup return function. Verify the bridge cleanup runs reliably.
+
+---
+
 ## Open Questions / Risks
 
 - **Async callbacks**: The OpenAI example needs `asyncio.ensure_future()`
