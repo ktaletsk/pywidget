@@ -10,7 +10,7 @@ app = marimo.App(width="medium")
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    # pywidget Demo (marimo)
+    # pywidget Demo
 
     This notebook demonstrates **pywidget** — write widgets entirely in Python,
     no JavaScript required.

@@ -32,7 +32,7 @@ jobs:
 
       - name: Export WASM notebook
         run: |
-          marimo export html-wasm examples/pywidget_marimo_demo.py -o _site --show-code
+          marimo export html-wasm examples/pywidget_demo_mo.py -o _site --show-code
 
       - uses: actions/configure-pages@v5
 
