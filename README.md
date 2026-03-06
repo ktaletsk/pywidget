@@ -15,6 +15,16 @@ WebAssembly) and syncs state bidirectionally with the kernel through
 
 Runs anywhere [anywidget](https://anywidget.dev/) runs — Jupyter Lab, Jupyter Notebook, [marimo](https://marimo.io/), and more.
 
+<p align="center">
+  <a href="https://notebook.link/github/ktaletsk/pywidget/commit/19ebdd786a99ddf6426c3a63206e2f6011e623d2/lab/?path=examples%2Fpywidget_demo.ipynb">
+    <img src="https://img.shields.io/badge/notebook-link-e2d610?logo=jupyter&logoColor=white" alt="pywidget on notebook.link">
+  </a>
+  &nbsp;
+  <a href="https://marimo.app/?src=https%3A%2F%2Fraw.githubusercontent.com%2Fktaletsk%2Fpywidget%2Frefs%2Fheads%2Fmain%2Fexamples%2Fpywidget_marimo_demo.py">
+    <img src="https://img.shields.io/badge/Open_in-marimo-1C7C54" alt="Open in marimo">
+  </a>
+</p>
+
 ### Why pywidget?
 
 - **One language** — define state, rendering, and interaction logic all in Python.
