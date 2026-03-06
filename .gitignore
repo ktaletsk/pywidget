@@ -20,6 +20,9 @@ htmlcov/
 .venv/
 .env
 
+# MyST
+_build/
+
 # Editor / OS
 .DS_Store
 .claude/

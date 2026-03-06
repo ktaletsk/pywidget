@@ -1,0 +1,9 @@
+version: 1
+project:
+  id: pywidget-myst-test
+  title: pywidget in MyST
+  description: Testing pywidget (Pyodide-based Python widgets) in MyST Markdown
+  toc:
+    - file: index.md
+site:
+  template: book-theme
