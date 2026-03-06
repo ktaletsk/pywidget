@@ -237,6 +237,19 @@ pywidget is a thin layer on top of anywidget. `PyWidget` subclasses
 Pyodide, runs your Python rendering code in an isolated namespace, and proxies
 the anywidget model API. No modifications to anywidget are needed.
 
+## Agentic skill
+
+If you use AI coding agent to create pywidgets, we recommend installing our [`skill/`](skill/) that documents how to build widgets correctly.
+
+To install in claude code:
+```bash
+mkdir -p ~/.claude/skills/create-pywidget
+curl -sL https://raw.githubusercontent.com/ktaletsk/pywidget/main/skill/SKILL.md \
+  -o ~/.claude/skills/create-pywidget/SKILL.md
+curl -sL https://raw.githubusercontent.com/ktaletsk/pywidget/main/skill/examples.md \
+  -o ~/.claude/skills/create-pywidget/examples.md
+```
+
 ## License
 
 MIT
