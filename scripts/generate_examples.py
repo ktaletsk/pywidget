@@ -19,7 +19,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES_DIR = REPO_ROOT / "examples"
 README_PATH = EXAMPLES_DIR / "README.md"
 MARIMO_BADGE_URL = "https://marimo.io/shield.svg"
-NOTEBOOK_LINK_BADGE_URL = "https://img.shields.io/badge/notebook-link-e2d610?logo=jupyter&logoColor=white"
+NOTEBOOK_LINK_BADGE_URL = (
+    "https://img.shields.io/badge/notebook-link-e2d610?logo=jupyter&logoColor=white"
+)
+COLAB_BADGE_URL = "https://colab.research.google.com/assets/colab-badge.svg"
 
 
 @dataclass(frozen=True)
@@ -27,6 +30,7 @@ class ExampleSpec:
     title: str
     marimo_source: Path
     notebook_path: Path
+    colab_path: Path
 
 
 def iter_marimo_sources() -> list[Path]:
@@ -36,6 +40,64 @@ def iter_marimo_sources() -> list[Path]:
 def notebook_path_for(source_path: Path) -> Path:
     stem = source_path.stem.removesuffix("_mo")
     return source_path.with_name(f"{stem}.ipynb")
+
+
+def colab_path_for(source_path: Path) -> Path:
+    stem = source_path.stem.removesuffix("_mo")
+    return source_path.with_name(f"{stem}_colab.ipynb")
+
+
+def parse_pep723_deps(header: str) -> list[str]:
+    """Extract dependency names from a PEP 723 inline script metadata header."""
+    deps: list[str] = []
+    in_deps = False
+    for line in header.splitlines():
+        text = line.lstrip("# ").strip()
+        if text.startswith("dependencies"):
+            # Handle single-line: dependencies = ["pywidget", "anywidget"]
+            match = re.search(r"\[(.+)\]", text)
+            if match:
+                for item in match.group(1).split(","):
+                    name = item.strip().strip('"').strip("'").strip()
+                    if name:
+                        deps.append(name)
+                break
+            in_deps = True
+            continue
+        if in_deps:
+            if text.startswith("]") or text.startswith("# ///"):
+                break
+            name = text.strip(' ",')
+            if name:
+                deps.append(name)
+    return deps
+
+
+def generate_colab_notebook(notebook_path: Path, colab_path: Path) -> None:
+    """Copy *notebook_path* to *colab_path* with a ``!pip install`` cell prepended."""
+    notebook = nbformat.read(notebook_path, as_version=4)
+
+    header = notebook.metadata.get("marimo", {}).get("header", "")
+    deps = parse_pep723_deps(header) if header else []
+
+    # Keep only packages that a Colab user actually needs to install.
+    skip = {"marimo", "anywidget"}
+    install_deps = [d for d in deps if re.split(r"[><=!]", d)[0] not in skip]
+    if not install_deps:
+        install_deps = ["pywidget"]
+    elif not any(re.split(r"[><=!]", d)[0] == "pywidget" for d in install_deps):
+        install_deps.insert(0, "pywidget")
+
+    pip_line = "!pip install " + " ".join(install_deps)
+
+    install_cell = nbformat.v4.new_code_cell(source=pip_line)
+    install_cell.metadata["id"] = "colab-install"
+    notebook.cells.insert(0, install_cell)
+
+    # Strip marimo-specific metadata that is irrelevant in Colab.
+    notebook.metadata.pop("marimo", None)
+
+    nbformat.write(notebook, colab_path)
 
 
 def extract_title(source_path: Path) -> str:
@@ -53,7 +115,9 @@ def extract_title(source_path: Path) -> str:
         if stripped.startswith("# "):
             return stripped[2:].strip()
 
-    raise ValueError(f"Could not find an H1 heading in the first markdown cell of {source_path}")
+    raise ValueError(
+        f"Could not find an H1 heading in the first markdown cell of {source_path}"
+    )
 
 
 def export_notebook(source_path: Path, notebook_path: Path) -> None:
@@ -97,7 +161,9 @@ def unwrap_anywidget_calls(source: str) -> str:
             cursor += 1
 
         if depth != 0:
-            raise ValueError("Unbalanced parentheses while unwrapping mo.ui.anywidget(...)")
+            raise ValueError(
+                "Unbalanced parentheses while unwrapping mo.ui.anywidget(...)"
+            )
 
         parts.append(source[index + len(token) : cursor - 1])
         start = cursor
@@ -128,7 +194,9 @@ def parse_control_assignment(stripped_line: str) -> tuple[str, str | None] | Non
         for keyword in call.keywords:
             if keyword.arg == "value":
                 return name, ast.unparse(keyword.value)
-        raise ValueError(f"Missing default value for mo.ui.{control_kind} in line: {stripped_line}")
+        raise ValueError(
+            f"Missing default value for mo.ui.{control_kind} in line: {stripped_line}"
+        )
 
     if control_kind == "button":
         return name, None
@@ -148,7 +216,10 @@ def clean_code_cell(source: str, control_defaults: dict[str, str | None]) -> str
             continue
         if is_top_level and stripped.startswith("return"):
             continue
-        if is_top_level and stripped in {'if __name__ == "__main__":', "if __name__ == '__main__':"}:
+        if is_top_level and stripped in {
+            'if __name__ == "__main__":',
+            "if __name__ == '__main__':",
+        }:
             continue
         if is_top_level and stripped == "app.run()":
             continue
@@ -225,21 +296,30 @@ def notebook_link_url_for(notebook_path: Path) -> str:
     return f"https://notebook.link/github.com/{REPO_OWNER}/{REPO_NAME}/?path={path}"
 
 
+def colab_url_for(colab_path: Path) -> str:
+    return (
+        f"https://colab.research.google.com/github/{REPO_OWNER}/{REPO_NAME}"
+        f"/blob/{REPO_REF}/examples/{colab_path.name}"
+    )
+
+
 def write_gallery_readme(example_specs: list[ExampleSpec]) -> None:
     lines = [
         "# gallery",
         "",
-        "| Example | marimo.app | notebook.link |",
-        "| --- | --- | --- |",
+        "| Example | marimo.app | notebook.link | Google Colab |",
+        "| --- | --- | --- | --- |",
     ]
 
     for spec in example_specs:
         marimo_url = marimo_url_for(spec.marimo_source)
         notebook_url = notebook_link_url_for(spec.notebook_path)
+        colab_url = colab_url_for(spec.colab_path)
         lines.append(
             f"| {spec.title} | "
             f"[![Open in marimo]({MARIMO_BADGE_URL})]({marimo_url}) | "
-            f"[![Open on notebook.link]({NOTEBOOK_LINK_BADGE_URL})]({notebook_url}) |"
+            f"[![Open on notebook.link]({NOTEBOOK_LINK_BADGE_URL})]({notebook_url}) | "
+            f"[![Open in Colab]({COLAB_BADGE_URL})]({colab_url}) |"
         )
 
     README_PATH.write_text("\n".join(lines) + "\n")
@@ -251,13 +331,16 @@ def main() -> None:
 
     for source_path in sources:
         notebook_path = notebook_path_for(source_path)
+        colab_path = colab_path_for(source_path)
         export_notebook(source_path, notebook_path)
         clean_notebook(notebook_path)
+        generate_colab_notebook(notebook_path, colab_path)
         example_specs.append(
             ExampleSpec(
                 title=extract_title(source_path),
                 marimo_source=source_path,
                 notebook_path=notebook_path,
+                colab_path=colab_path,
             )
         )
 
