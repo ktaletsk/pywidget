@@ -6,10 +6,19 @@
 class HelloWidget(PyWidget):
     def render(self, el, model):
         el.innerHTML = """
-        <div style="padding:20px; background:linear-gradient(135deg,#667eea,#764ba2);
-                    border-radius:12px; color:white; font-family:sans-serif;">
+        <style>
+            .hello-container {
+                padding: 20px; border-radius: 12px;
+                font-family: system-ui, sans-serif;
+                background: #f0f4ff; color: #1a1a2e;
+            }
+            @media (prefers-color-scheme: dark) {
+                .hello-container { background: #1a1a2e; color: #e0e4ff; }
+            }
+        </style>
+        <div class="hello-container">
             <h2 style="margin:0 0 8px 0;">Hello from Pyodide!</h2>
-            <p style="margin:0; opacity:0.9;">Rendered by Python in WebAssembly.</p>
+            <p style="margin:0; opacity:0.75;">Rendered by Python in WebAssembly.</p>
         </div>
         """
 ```
@@ -22,7 +31,7 @@ class GreeterWidget(PyWidget):
 
     def render(self, el, model):
         name = model.get("name")
-        el.innerHTML = f'<span style="font-size:24px;">Hello, <strong>{name}</strong>!</span>'
+        el.innerHTML = f'<span style="font-size:24px; font-family:system-ui, sans-serif;">Hello, <strong>{name}</strong>!</span>'
 
     def update(self, el, model):
         render(el, model)
@@ -39,10 +48,14 @@ class CounterWidget(PyWidget):
     def render(self, el, model):
         count = model.get("count")
         el.innerHTML = f"""
-        <div style="font-family:sans-serif; display:flex; align-items:center; gap:12px;">
-            <button id="dec" style="padding:8px 16px; font-size:18px; cursor:pointer;">-</button>
+        <div style="font-family:system-ui, sans-serif; display:flex; align-items:center; gap:12px;">
+            <button id="dec" style="padding:8px 16px; font-size:18px; cursor:pointer;
+                border:1px solid currentColor; background:transparent; color:inherit;
+                border-radius:6px;">−</button>
             <span id="display" style="font-size:24px; min-width:60px; text-align:center;">{count}</span>
-            <button id="inc" style="padding:8px 16px; font-size:18px; cursor:pointer;">+</button>
+            <button id="inc" style="padding:8px 16px; font-size:18px; cursor:pointer;
+                border:1px solid currentColor; background:transparent; color:inherit;
+                border-radius:6px;">+</button>
         </div>
         """
         def on_inc(event):
@@ -77,7 +90,7 @@ class StatsWidget(PyWidget):
         import numpy as np
         arr = np.array(list(model.get("data")))
         if arr.size == 0:
-            el.innerHTML = '<p style="color:#999;">No data.</p>'
+            el.innerHTML = '<p style="opacity:0.5;">No data.</p>'
             return
         el.innerHTML = f"""
         <table style="font-family:monospace; border-collapse:collapse;">
@@ -105,7 +118,7 @@ class SalesTable(PyWidget):
 
         rows = json.loads(model.get("sales_json"))
         if not rows:
-            el.innerHTML = '<p style="color:#999;">No data.</p>'
+            el.innerHTML = '<p style="opacity:0.5;">No data.</p>'
             return
         df = pd.DataFrame(rows)
         summary = (
@@ -114,10 +127,10 @@ class SalesTable(PyWidget):
             .round(2).reset_index()
         )
         el.innerHTML = f"""
-        <div style="font-family:sans-serif; padding:16px;">
-            <h3>Sales Summary (Pandas in browser)</h3>
+        <div style="font-family:system-ui, sans-serif; padding:16px;">
+            <h3 style="margin:0 0 12px 0;">Sales Summary</h3>
             {summary.to_html(index=False, border=0)}
-            <p style="color:#888; font-size:13px;">{len(df)} rows aggregated</p>
+            <p style="opacity:0.5; font-size:13px; margin-top:8px;">{len(df)} rows aggregated</p>
         </div>
         """
 
@@ -193,7 +206,7 @@ class SliderWidget(PyWidget):
     def render(self, el, model):
         val = model.get("value")
         el.innerHTML = f"""
-        <div style="font-family:sans-serif; padding:16px;">
+        <div style="font-family:system-ui, sans-serif; padding:16px;">
             <input id="slider" type="range" min="0" max="100" step="1"
                    value="{val}" style="width:200px;" />
             <span id="label">{val:.0f}</span>
@@ -215,7 +228,25 @@ class SliderWidget(PyWidget):
             el.querySelector("#label").textContent = f"{val:.0f}"
 ```
 
-## marimo integration
+## Jupyter usage
+
+```python
+import traitlets
+from pywidget import PyWidget
+
+class MyWidget(PyWidget):
+    value = traitlets.Int(0).tag(sync=True)
+    def render(self, el, model):
+        # ... render logic ...
+        pass
+    def update(self, el, model):
+        render(el, model)
+
+# Display directly — works in Jupyter Lab, Notebook, and Colab
+MyWidget(value=42)
+```
+
+## marimo usage
 
 ```python
 import marimo as mo
@@ -234,12 +265,13 @@ widget = mo.ui.anywidget(MyWidget(value=42))
 widget  # display in cell
 
 # In another cell, read state reactively:
-# widget.widget.value
+# widget.value["value"]
 ```
 
 ## String-based alternative
 
-For simple widgets or dynamically generated code:
+For simple widgets or dynamically generated code, set `_py_render` directly.
+Method extraction is skipped when this attribute is set.
 
 ```python
 class SimpleWidget(PyWidget):
