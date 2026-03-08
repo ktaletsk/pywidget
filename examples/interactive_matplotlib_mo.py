@@ -4,6 +4,17 @@ __generated_with = "0.20.4"
 app = marimo.App(width="medium")
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Interactive Matplotlib Budget Editor
+
+    Drag bar tops in a matplotlib chart and sync the edited values back to the
+    Python kernel.
+    """)
+    return
+
+
 @app.cell
 def _():
     import marimo as mo
