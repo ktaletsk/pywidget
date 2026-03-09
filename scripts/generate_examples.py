@@ -204,7 +204,51 @@ def parse_control_assignment(stripped_line: str) -> tuple[str, str | None] | Non
     return None
 
 
-def clean_code_cell(source: str, control_defaults: dict[str, str | None]) -> str:
+def _replace_mo_md(source: str) -> str:
+    """Replace ``mo.md(...)`` calls with ``print(...)``."""
+    token = "mo.md("
+    parts: list[str] = []
+    start = 0
+
+    while True:
+        index = source.find(token, start)
+        if index == -1:
+            parts.append(source[start:])
+            return "".join(parts)
+
+        parts.append(source[start:index])
+        parts.append("print(")
+        cursor = index + len(token)
+        depth = 1
+
+        while cursor < len(source) and depth > 0:
+            char = source[cursor]
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+            cursor += 1
+
+        if depth != 0:
+            raise ValueError("Unbalanced parentheses while replacing mo.md(...)")
+
+        parts.append(source[index + len(token) : cursor])
+        start = cursor
+
+    return "".join(parts)
+
+
+def clean_code_cell(
+    source: str,
+    control_defaults: dict[str, str | None],
+    anywidget_names: set[str],
+) -> str:
+    # Detect anywidget wrapper names before unwrapping strips the mo.ui prefix.
+    for line in source.splitlines():
+        m = re.match(r"(\w+)\s*=\s*mo\.ui\.anywidget\(", line.strip())
+        if m:
+            anywidget_names.add(m.group(1))
+
     source = unwrap_anywidget_calls(source)
     cleaned_lines: list[str] = []
 
@@ -243,6 +287,24 @@ def clean_code_cell(source: str, control_defaults: dict[str, str | None]) -> str
         replacement = name if default_expr is not None else "None"
         cleaned_source = re.sub(rf"\b{name}\.value\b", replacement, cleaned_source)
 
+    # Convert anywidget .value access to direct trait access:
+    #   wrapper.value.get("key", default) → wrapper.key
+    #   wrapper.value["key"]              → wrapper.key
+    for name in anywidget_names:
+        cleaned_source = re.sub(
+            rf'\b{re.escape(name)}\.value\.get\(\s*"(\w+)"(?:\s*,\s*[^)]+)?\)',
+            rf"{name}.\1",
+            cleaned_source,
+        )
+        cleaned_source = re.sub(
+            rf'\b{re.escape(name)}\.value\[\s*"(\w+)"\s*\]',
+            rf"{name}.\1",
+            cleaned_source,
+        )
+
+    # Convert mo.md(...) calls to print(...) so the cell survives the mo. check.
+    cleaned_source = _replace_mo_md(cleaned_source)
+
     cleaned_source = re.sub(r"^\s*\n", "", cleaned_source, flags=re.MULTILINE)
     cleaned_source = cleaned_source.strip()
 
@@ -258,10 +320,11 @@ def clean_notebook(notebook_path: Path) -> None:
     notebook = nbformat.read(notebook_path, as_version=4)
     cleaned_cells = []
     control_defaults: dict[str, str | None] = {}
+    anywidget_names: set[str] = set()
 
     for cell in notebook.cells:
         if cell.cell_type == "code":
-            cleaned_source = clean_code_cell(cell.source, control_defaults)
+            cleaned_source = clean_code_cell(cell.source, control_defaults, anywidget_names)
             if not cleaned_source:
                 continue
             cell.source = cleaned_source

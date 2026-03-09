@@ -79,7 +79,7 @@ def _(PyWidget, create_proxy, traitlets):
                         color: #333; transition: background 0.15s;
                     ">&larr;</button>
                     <div style="text-align: center;">
-                        <img id="carousel-img" src=""
+                        <img id="carousel-img" src="" crossorigin="anonymous"
                              style="max-width: 500px; max-height: 400px; border-radius: 8px;
                                     display: block; object-fit: contain;
                                     border: 1px solid #eee;" />
