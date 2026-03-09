@@ -23,6 +23,9 @@ NOTEBOOK_LINK_BADGE_URL = (
     "https://img.shields.io/badge/notebook-link-e2d610?logo=jupyter&logoColor=white"
 )
 COLAB_BADGE_URL = "https://colab.research.google.com/assets/colab-badge.svg"
+VSCODE_BADGE_URL = (
+    "https://img.shields.io/badge/vscode.dev-007ACC?logo=visualstudiocode&logoColor=white"
+)
 
 
 @dataclass(frozen=True)
@@ -366,23 +369,32 @@ def colab_url_for(colab_path: Path) -> str:
     )
 
 
+def vscode_url_for(notebook_path: Path) -> str:
+    return (
+        f"https://vscode.dev/github/{REPO_OWNER}/{REPO_NAME}"
+        f"/blob/{REPO_REF}/examples/{notebook_path.name}"
+    )
+
+
 def write_gallery_readme(example_specs: list[ExampleSpec]) -> None:
     lines = [
         "# gallery",
         "",
-        "| Example | marimo.app | notebook.link | Google Colab |",
-        "| --- | --- | --- | --- |",
+        "| Example | marimo.app | notebook.link | Google Colab | VS Code |",
+        "| --- | --- | --- | --- | --- |",
     ]
 
     for spec in example_specs:
         marimo_url = marimo_url_for(spec.marimo_source)
         notebook_url = notebook_link_url_for(spec.notebook_path)
         colab_url = colab_url_for(spec.colab_path)
+        vscode_url = vscode_url_for(spec.notebook_path)
         lines.append(
             f"| {spec.title} | "
             f"[![Open in marimo]({MARIMO_BADGE_URL})]({marimo_url}) | "
             f"[![Open on notebook.link]({NOTEBOOK_LINK_BADGE_URL})]({notebook_url}) | "
-            f"[![Open in Colab]({COLAB_BADGE_URL})]({colab_url}) |"
+            f"[![Open in Colab]({COLAB_BADGE_URL})]({colab_url}) | "
+            f"[![Open in vscode.dev]({VSCODE_BADGE_URL})]({vscode_url}) |"
         )
 
     README_PATH.write_text("\n".join(lines) + "\n")
