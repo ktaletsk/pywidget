@@ -26,6 +26,8 @@ COLAB_BADGE_URL = "https://colab.research.google.com/assets/colab-badge.svg"
 CODESPACES_BADGE_URL = (
     "https://img.shields.io/badge/GitHub_Codespaces-000?logo=github&logoColor=white"
 )
+MOLAB_BADGE_URL = "https://marimo.io/molab-shield.svg"
+BINDER_BADGE_URL = "https://mybinder.org/badge_logo.svg"
 
 
 @dataclass(frozen=True)
@@ -373,23 +375,42 @@ def codespaces_url_for() -> str:
     return f"https://codespaces.new/{REPO_OWNER}/{REPO_NAME}?quickstart=1"
 
 
+def molab_url_for(source_path: Path) -> str:
+    return (
+        f"https://molab.marimo.io/github/{REPO_OWNER}/{REPO_NAME}"
+        f"/blob/{REPO_REF}/examples/{source_path.name}"
+    )
+
+
+def binder_url_for(notebook_path: Path) -> str:
+    labpath = quote(f"examples/{notebook_path.name}", safe="")
+    return (
+        f"https://mybinder.org/v2/gh/{REPO_OWNER}/{REPO_NAME}"
+        f"/{REPO_REF}?labpath={labpath}"
+    )
+
+
 def write_gallery_readme(example_specs: list[ExampleSpec]) -> None:
     lines = [
         "# gallery",
         "",
-        "| Example | marimo.app | notebook.link | Google Colab | GitHub Codespaces |",
-        "| --- | --- | --- | --- | --- |",
+        "| Example | marimo.app | molab | notebook.link | Binder | Google Colab | GitHub Codespaces |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
     ]
 
     codespaces_url = codespaces_url_for()
     for spec in example_specs:
         marimo_url = marimo_url_for(spec.marimo_source)
+        molab_url = molab_url_for(spec.marimo_source)
         notebook_url = notebook_link_url_for(spec.notebook_path)
+        binder_url = binder_url_for(spec.notebook_path)
         colab_url = colab_url_for(spec.colab_path)
         lines.append(
             f"| {spec.title} | "
             f"[![Open in marimo]({MARIMO_BADGE_URL})]({marimo_url}) | "
+            f"[![Open in molab]({MOLAB_BADGE_URL})]({molab_url}) | "
             f"[![Open on notebook.link]({NOTEBOOK_LINK_BADGE_URL})]({notebook_url}) | "
+            f"[![Launch on Binder]({BINDER_BADGE_URL})]({binder_url}) | "
             f"[![Open in Colab]({COLAB_BADGE_URL})]({colab_url}) | "
             f"[![Open in GitHub Codespaces]({CODESPACES_BADGE_URL})]({codespaces_url}) |"
         )
