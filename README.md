@@ -45,19 +45,9 @@ Runs anywhere [anywidget](https://anywidget.dev/) runs — Jupyter Lab, Jupyter 
 - **Zero build infrastructure** — `pip install pywidget` and go. No `npm`,
   no webpack, no `jupyter labextension develop`.
 
-```mermaid
-flowchart LR
-    subgraph Kernel ["Kernel (CPython)"]
-        A["class MyWidget(PyWidget):\n    count = Int(0)\n    def render(self, el, model): ..."]
-    end
-
-    subgraph Browser ["Browser (Pyodide / WASM)"]
-        B["def render(el, model):\n    el.innerHTML = ...\n    model.set('count', 1)"]
-    end
-
-    A -- "traitlet sync\n(WebSocket)" --> B
-    B -- "model.set() +\nsave_changes()" --> A
-```
+<p align="center">
+  <img src="docs/architecture.svg" alt="pywidget architecture diagram" width="660">
+</p>
 
 ## Install
 
