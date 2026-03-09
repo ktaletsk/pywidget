@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.14"
+# requires-python = ">=3.10"
 # dependencies = [
 #     "pywidget",
 #     "anywidget",
@@ -154,6 +154,10 @@ def _(PyWidget, mo, traitlets):
                 counter.textContent = f"{index + 1} / {len(images)}"
                 prev_btn.disabled = index == 0
                 next_btn.disabled = index == len(images) - 1
+            else:
+                # Carousel DOM doesn't exist yet (e.g. images changed from empty
+                # to non-empty); fall back to a full re-render.
+                render(el, model)
 
     sample_images = [
         "https://picsum.photos/id/10/500/400",
