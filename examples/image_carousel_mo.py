@@ -179,11 +179,11 @@ def _(PyWidget, create_proxy, traitlets):
 @app.cell
 def _(ImageCarousel, mo):
     sample_images = [
-        "https://picsum.photos/id/10/500/400",
-        "https://picsum.photos/id/20/500/400",
-        "https://picsum.photos/id/30/500/400",
-        "https://picsum.photos/id/40/500/400",
-        "https://picsum.photos/id/50/500/400",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Moraine_Lake_17092005.jpg/500px-Moraine_Lake_17092005.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Hallstatt_300.jpg/500px-Hallstatt_300.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Lavaux_Vineyards.jpg/500px-Lavaux_Vineyards.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Neuschwanstein_castle.jpg/500px-Neuschwanstein_castle.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Ponta_da_Piedade_Lagos.jpg/500px-Ponta_da_Piedade_Lagos.jpg",
     ]
 
     carousel = ImageCarousel(images=sample_images)
