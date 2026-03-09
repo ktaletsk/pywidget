@@ -405,14 +405,21 @@ def write_gallery_readme(example_specs: list[ExampleSpec]) -> None:
         notebook_url = notebook_link_url_for(spec.notebook_path)
         binder_url = binder_url_for(spec.notebook_path)
         colab_url = colab_url_for(spec.colab_path)
+        def badge(alt: str, img_url: str, link_url: str) -> str:
+            return (
+                f'<a href="{link_url}">'
+                f'<img src="{img_url}" alt="{alt}" height="20">'
+                f"</a>"
+            )
+
         lines.append(
             f"| {spec.title} | "
-            f"[![Open in marimo]({MARIMO_BADGE_URL})]({marimo_url}) | "
-            f"[![Open in molab]({MOLAB_BADGE_URL})]({molab_url}) | "
-            f"[![Open on notebook.link]({NOTEBOOK_LINK_BADGE_URL})]({notebook_url}) | "
-            f"[![Launch on Binder]({BINDER_BADGE_URL})]({binder_url}) | "
-            f"[![Open in Colab]({COLAB_BADGE_URL})]({colab_url}) | "
-            f"[![Open in GitHub Codespaces]({CODESPACES_BADGE_URL})]({codespaces_url}) |"
+            f"{badge('Open in marimo', MARIMO_BADGE_URL, marimo_url)} | "
+            f"{badge('Open in molab', MOLAB_BADGE_URL, molab_url)} | "
+            f"{badge('Open on notebook.link', NOTEBOOK_LINK_BADGE_URL, notebook_url)} | "
+            f"{badge('Launch on Binder', BINDER_BADGE_URL, binder_url)} | "
+            f"{badge('Open in Colab', COLAB_BADGE_URL, colab_url)} | "
+            f"{badge('Open in GitHub Codespaces', CODESPACES_BADGE_URL, codespaces_url)} |"
         )
 
     README_PATH.write_text("\n".join(lines) + "\n")
