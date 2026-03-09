@@ -91,44 +91,20 @@ class ImageCarousel(PyWidget):
         wrapper.appendChild(counter)
         el.appendChild(wrapper)
 
-        def refresh():
-            cur = model.get("index")
-            imgs = list(model.get("images"))
-            n = len(imgs)
-            img_node = el.querySelector("#carousel-img")
-            if img_node:
-                if n > 0 and 0 <= cur < n:
-                    img_node.src = imgs[cur]
-                    img_node.alt = f"Image {cur + 1} of {n}"
-                else:
-                    img_node.removeAttribute("src")
-                    img_node.alt = "No images"
-            cnt = el.querySelector("#carousel-counter")
-            if cnt:
-                cnt.textContent = f"{cur + 1} / {n}" if n > 0 else "No images"
-            lb = el.querySelector("#carousel-left")
-            if lb:
-                lb.disabled = cur <= 0
-            rb = el.querySelector("#carousel-right")
-            if rb:
-                rb.disabled = n == 0 or cur >= n - 1
-
         def on_left(event):
             cur = model.get("index")
             if cur > 0:
-                new_idx = cur - 1
-                model.set("index", new_idx)
+                model.set("index", cur - 1)
                 model.save_changes()
-                refresh()
+                update(el, model)
 
         def on_right(event):
             cur = model.get("index")
             imgs = list(model.get("images"))
             if cur < len(imgs) - 1:
-                new_idx = cur + 1
-                model.set("index", new_idx)
+                model.set("index", cur + 1)
                 model.save_changes()
-                refresh()
+                update(el, model)
 
         left_btn.addEventListener("click", create_proxy(on_left))
         right_btn.addEventListener("click", create_proxy(on_right))
