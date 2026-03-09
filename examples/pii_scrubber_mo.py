@@ -29,12 +29,25 @@ def _(mo):
     2. Click **Scan for PII** to detect emails, phone numbers, SSNs, credit
        cards, and IP addresses with regex.
     3. _(Optional)_ Click **Scan with LLM** to ask a local Ollama model for
-       additional PII (requires Ollama running on localhost:11434).
+       additional PII (requires Ollama running on your machine — see below).
     4. _(Optional)_ Select text in the editor and click **Redact Selection** to
        manually flag all occurrences of that text.
     5. Uncheck any findings you want to keep.
     6. Click **Submit** — only the redacted text and a PII summary are sent to
        the kernel.
+
+    ## LLM scan setup (Ollama)
+
+    > **Important:** You must start Ollama with CORS origins enabled.
+    > A normal `ollama serve` will **not** work — the browser blocks
+    > cross-origin requests without the correct headers.
+    >
+    > ```bash
+    > OLLAMA_ORIGINS=* ollama serve
+    > ```
+    >
+    > This allows the widget (running in your browser) to reach the Ollama
+    > API on `localhost:11434`. Your data never leaves your machine.
     """)
     return
 
@@ -59,6 +72,7 @@ def _(PyWidget, create_proxy, mo, traitlets):
 
         async def render(self, el, model):
             import re, json, markdown, asyncio, textwrap
+            from js import Blob, URL, Worker, Object, Promise
 
             # ----- Constants -----
             PII_PATTERNS = [
@@ -131,6 +145,57 @@ def _(PyWidget, create_proxy, mo, traitlets):
                 Patient SSN verified: 123-45-6789. Secondary ID credit card:
                 4111-1111-1111-1111. Billing sent to john.smith@example.com.
             """)
+
+            # ----- Helper: ollama_fetch (Web Worker bypass for Colab SW) -----
+            async def ollama_fetch(url, method="GET", body=None):
+                """Fetch via a disposable Web Worker.
+
+                Google Colab's service worker intercepts all localhost HTTP
+                requests from the main thread and returns a fake 500.  A
+                blob-URL Web Worker is not controlled by that SW, so fetch()
+                inside it reaches the real localhost Ollama server.
+                """
+                worker_code = (
+                    "self.onmessage = async function(e) {\n"
+                    "  try {\n"
+                    "    const opts = {method: e.data.method || 'GET'};\n"
+                    "    if (e.data.body) {\n"
+                    "      opts.body = e.data.body;\n"
+                    "      opts.headers = {'Content-Type': 'application/json'};\n"
+                    "    }\n"
+                    "    const resp = await fetch(e.data.url, opts);\n"
+                    "    const text = await resp.text();\n"
+                    "    self.postMessage({ok: true, status: resp.status, body: text});\n"
+                    "  } catch(err) {\n"
+                    "    self.postMessage({ok: false, error: err.message});\n"
+                    "  }\n"
+                    "};\n"
+                )
+                blob = Blob.new(
+                    to_js([worker_code]),
+                    to_js({"type": "application/javascript"}, dict_converter=Object.fromEntries),
+                )
+                wurl = URL.createObjectURL(blob)
+                worker = Worker.new(wurl)
+                try:
+                    def executor(resolve, reject):
+                        def on_msg(e):
+                            resolve(e.data)
+                        def on_err(e):
+                            reject(e)
+                        worker.onmessage = create_proxy(on_msg)
+                        worker.onerror = create_proxy(on_err)
+                        msg = {"url": url, "method": method}
+                        if body is not None:
+                            msg["body"] = body
+                        worker.postMessage(to_js(msg, dict_converter=Object.fromEntries))
+                    result = await Promise.new(create_proxy(executor))
+                    if not result.ok:
+                        raise Exception(str(result.error))
+                    return json.loads(str(result.body))
+                finally:
+                    worker.terminate()
+                    URL.revokeObjectURL(wurl)
 
             # ----- Closure State -----
             state = {
@@ -563,9 +628,7 @@ def _(PyWidget, create_proxy, mo, traitlets):
             async def fetch_ollama_models():
                 select = el.querySelector("#ollama-model")
                 try:
-                    from pyodide.http import pyfetch
-                    resp = await pyfetch("http://localhost:11434/api/tags")
-                    data = await resp.json()
+                    data = await ollama_fetch("http://localhost:11434/api/tags")
                     models = data.get("models", [])
                     if not models:
                         select.innerHTML = '<option value="">No models found</option>'
@@ -595,8 +658,6 @@ def _(PyWidget, create_proxy, mo, traitlets):
                 )
 
                 try:
-                    from pyodide.http import pyfetch
-
                     prompt = (
                         "Analyze the following text and return ONLY a JSON array of PII items found. "
                         "Each item should have 'type' (one of: NAME, ADDRESS, DATE_OF_BIRTH, "
@@ -606,10 +667,9 @@ def _(PyWidget, create_proxy, mo, traitlets):
                         f"Text:\n{raw_text}"
                     )
 
-                    resp = await pyfetch(
+                    data = await ollama_fetch(
                         "http://localhost:11434/api/generate",
                         method="POST",
-                        headers={"Content-Type": "application/json"},
                         body=json.dumps({
                             "model": selected_model,
                             "prompt": prompt,
@@ -617,7 +677,6 @@ def _(PyWidget, create_proxy, mo, traitlets):
                         }),
                     )
 
-                    data = await resp.json()
                     response_text = data.get("response", "")
 
                     # Extract JSON array from response
@@ -679,7 +738,7 @@ def _(PyWidget, create_proxy, mo, traitlets):
                         status.innerHTML = (
                             '<span style="color:#c62828;">'
                             'Could not connect to Ollama. Make sure it is running: '
-                            '<code>ollama serve</code></span>'
+                            '<code>OLLAMA_ORIGINS=* ollama serve</code></span>'
                         )
                     elif "CORS" in err:
                         status.innerHTML = (
