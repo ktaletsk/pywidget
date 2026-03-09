@@ -48,6 +48,10 @@ def _(mo):
     >
     > This allows the widget (running in your browser) to reach the Ollama
     > API on `localhost:11434`. Your data never leaves your machine.
+
+    ### Browser compatibility
+
+    > If widget fails to find your ollama API, you need to disable adblocker or Brave Shields for the page
     """)
     return
 
