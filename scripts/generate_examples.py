@@ -24,7 +24,7 @@ NOTEBOOK_LINK_BADGE_URL = (
 )
 COLAB_BADGE_URL = "https://colab.research.google.com/assets/colab-badge.svg"
 CODESPACES_BADGE_URL = (
-    "https://github.com/codespaces/badge.svg"
+    "https://img.shields.io/badge/GitHub_Codespaces-000?logo=github&logoColor=white"
 )
 
 
