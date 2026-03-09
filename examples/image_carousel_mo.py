@@ -39,7 +39,7 @@ def _():
 
 
 @app.cell
-def _(PyWidget, mo, traitlets):
+def _(PyWidget, create_proxy, traitlets):
     class ImageCarousel(PyWidget):
         images = traitlets.List(traitlets.Unicode(), []).tag(sync=True)
         index = traitlets.Int(0).tag(sync=True)
@@ -155,6 +155,11 @@ def _(PyWidget, mo, traitlets):
                 prev_btn.disabled = index == 0
                 next_btn.disabled = index == len(images) - 1
 
+    return (ImageCarousel,)
+
+
+@app.cell
+def _(ImageCarousel, mo):
     sample_images = [
         "https://picsum.photos/id/10/500/400",
         "https://picsum.photos/id/20/500/400",
@@ -164,7 +169,9 @@ def _(PyWidget, mo, traitlets):
     ]
 
     carousel = ImageCarousel(images=sample_images)
-    mo.ui.anywidget(carousel)
+    carousel_ui = mo.ui.anywidget(carousel)
+    carousel_ui
+    return carousel_ui, sample_images
 
 
 @app.cell(hide_code=True)
@@ -180,8 +187,17 @@ def _(mo):
     All navigation happens in the browser via Pyodide — clicking the arrow
     buttons updates the DOM directly with no kernel round-trip.
     The `update()` method handles kernel-side changes, so you can also
-    set `carousel.index = 3` from Python to jump to a specific image.
+    set `carousel_ui.widget.index = 3` from Python to jump to a specific image.
     """)
+    return
+
+
+@app.cell
+def _(carousel_ui, mo, sample_images):
+    # Example: read the selected value with carousel_ui.value["index"]
+    idx = carousel_ui.value.get("index", 0)
+    url = sample_images[idx] if 0 <= idx < len(sample_images) else None
+    mo.md(f"**Selected index:** `{idx}`  \n**Selected image URL:** `{url}`")
     return
 
 
