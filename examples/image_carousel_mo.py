@@ -57,11 +57,15 @@ def _(PyWidget, create_proxy, traitlets):
                 """
                 return
 
-            # Clamp index
+            # Clamp index and sync back to model
+            original_index = index
             if index < 0:
                 index = 0
             if index >= len(images):
                 index = len(images) - 1
+            if index != original_index:
+                model.set("index", index)
+                model.save_changes()
 
             prev_disabled = "disabled" if index == 0 else ""
             next_disabled = "disabled" if index == len(images) - 1 else ""
@@ -75,7 +79,7 @@ def _(PyWidget, create_proxy, traitlets):
                         color: #333; transition: background 0.15s;
                     ">&larr;</button>
                     <div style="text-align: center;">
-                        <img id="carousel-img" src="{images[index]}"
+                        <img id="carousel-img" src=""
                              style="max-width: 500px; max-height: 400px; border-radius: 8px;
                                     display: block; object-fit: contain;
                                     border: 1px solid #eee;" />
@@ -92,6 +96,7 @@ def _(PyWidget, create_proxy, traitlets):
                 </div>
             </div>
             """
+            el.querySelector("#carousel-img").src = images[index]
 
             def update_display(new_index):
                 img = el.querySelector("#carousel-img")
@@ -99,11 +104,17 @@ def _(PyWidget, create_proxy, traitlets):
                 prev_btn = el.querySelector("#prev")
                 next_btn = el.querySelector("#next")
                 current_images = list(model.get("images"))
-                if img and current_images:
-                    img.src = current_images[new_index]
-                    counter.textContent = f"{new_index + 1} / {len(current_images)}"
-                    prev_btn.disabled = new_index == 0
-                    next_btn.disabled = new_index == len(current_images) - 1
+                if not img or not current_images:
+                    return
+                # Clamp to avoid IndexError from stale model state
+                if new_index < 0:
+                    new_index = 0
+                if new_index >= len(current_images):
+                    new_index = len(current_images) - 1
+                img.src = current_images[new_index]
+                counter.textContent = f"{new_index + 1} / {len(current_images)}"
+                prev_btn.disabled = new_index == 0
+                next_btn.disabled = new_index == len(current_images) - 1
 
             def on_prev(event):
                 idx = model.get("index")
@@ -138,22 +149,29 @@ def _(PyWidget, create_proxy, traitlets):
                 """
                 return
 
-            # Clamp index
+            # Clamp index and sync back to model
+            original_index = index
             if index < 0:
                 index = 0
             if index >= len(images):
                 index = len(images) - 1
+            if index != original_index:
+                model.set("index", index)
+                model.save_changes()
 
             img = el.querySelector("#carousel-img")
+            if not img:
+                # DOM has "No images" placeholder; re-render full carousel
+                self.render(el, model)
+                return
+
             counter = el.querySelector("#counter")
             prev_btn = el.querySelector("#prev")
             next_btn = el.querySelector("#next")
-
-            if img:
-                img.src = images[index]
-                counter.textContent = f"{index + 1} / {len(images)}"
-                prev_btn.disabled = index == 0
-                next_btn.disabled = index == len(images) - 1
+            img.src = images[index]
+            counter.textContent = f"{index + 1} / {len(images)}"
+            prev_btn.disabled = index == 0
+            next_btn.disabled = index == len(images) - 1
 
     return (ImageCarousel,)
 
