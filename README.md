@@ -14,6 +14,9 @@
         <a href="https://molab.marimo.io/github/ktaletsk/pywidget/blob/main/examples/pywidget_marimo_demo.py">
         <img src="https://marimo.io/molab-shield.svg" alt="Open in molab">
       </a>
+        <a href="https://colab.research.google.com/github/ktaletsk/pywidget/blob/main/examples/pywidget_demo_colab.ipynb">
+        <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open in Colab">
+      </a>
         <a href="https://mybinder.org/v2/gh/ktaletsk/pywidget/main?labpath=examples%2Fpywidget_demo.ipynb">
         <img src="https://mybinder.org/badge_logo.svg" alt="Launch on Binder">
       </a>
