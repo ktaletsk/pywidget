@@ -37,11 +37,12 @@ def _(mo):
 
     ```python
     INVENT_URL = (
-        "https://github.com/ktaletsk/invent/archive/refs/heads/pyodide-compat.zip"
+        "https://github.com/ktaletsk/invent/releases/download/"
+        "pyodide-compat-v0.0.1a2/invent-0.0.1a2-py3-none-any.whl"
     )
     ```
 
-    micropip resolves the zip as a source distribution and installs it.
+    micropip installs it as a pre-built wheel (no build step required).
     Installation is **cached per Pyodide instance** — subsequent widgets on the same
     page do not re-download.
 
@@ -58,7 +59,8 @@ def _():
     from pywidget import PyWidget
 
     INVENT_URL = (
-        "https://github.com/ktaletsk/invent/archive/refs/heads/pyodide-compat.zip"
+        "https://github.com/ktaletsk/invent/releases/download/"
+        "pyodide-compat-v0.0.1a2/invent-0.0.1a2-py3-none-any.whl"
     )
     return PyWidget, mo, traitlets, INVENT_URL
 
