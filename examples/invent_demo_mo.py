@@ -37,12 +37,13 @@ def _(mo):
 
     ```python
     INVENT_URL = (
-        "https://github.com/ktaletsk/invent/releases/download/"
-        "pyodide-compat-v0.0.1a2/invent-0.0.1a2-py3-none-any.whl"
+        "https://cdn.jsdelivr.net/gh/ktaletsk/invent@pyodide-compat"
+        "/dist/invent-0.0.1a2-py3-none-any.whl"
     )
     ```
 
-    micropip installs it as a pre-built wheel (no build step required).
+    micropip installs it as a pre-built wheel served via jsDelivr CDN
+    (which sets the required `Access-Control-Allow-Origin: *` header).
     Installation is **cached per Pyodide instance** — subsequent widgets on the same
     page do not re-download.
 
@@ -59,8 +60,8 @@ def _():
     from pywidget import PyWidget
 
     INVENT_URL = (
-        "https://github.com/ktaletsk/invent/releases/download/"
-        "pyodide-compat-v0.0.1a2/invent-0.0.1a2-py3-none-any.whl"
+        "https://cdn.jsdelivr.net/gh/ktaletsk/invent@pyodide-compat"
+        "/dist/invent-0.0.1a2-py3-none-any.whl"
     )
     return PyWidget, mo, traitlets, INVENT_URL
 
