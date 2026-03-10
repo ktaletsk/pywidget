@@ -162,19 +162,19 @@ def _(PyWidget, create_proxy, mo, traitlets, INVENT_URL):
             from invent._compat import button, div, span
 
             display = span(str(model.get("count")))
-            display.style["font-size"] = "24px"
-            display.style["min-width"] = "60px"
-            display.style["text-align"] = "center"
+            display.style.setProperty("font-size", "24px")
+            display.style.setProperty("min-width", "60px")
+            display.style.setProperty("text-align", "center")
 
             dec_btn = button("−")
-            dec_btn.style["padding"] = "8px 16px"
-            dec_btn.style["font-size"] = "18px"
-            dec_btn.style["cursor"] = "pointer"
+            dec_btn.style.setProperty("padding", "8px 16px")
+            dec_btn.style.setProperty("font-size", "18px")
+            dec_btn.style.setProperty("cursor", "pointer")
 
             inc_btn = button("+")
-            inc_btn.style["padding"] = "8px 16px"
-            inc_btn.style["font-size"] = "18px"
-            inc_btn.style["cursor"] = "pointer"
+            inc_btn.style.setProperty("padding", "8px 16px")
+            inc_btn.style.setProperty("font-size", "18px")
+            inc_btn.style.setProperty("cursor", "pointer")
 
             def on_inc(event):
                 new_val = model.get("count") + 1
@@ -193,11 +193,11 @@ def _(PyWidget, create_proxy, mo, traitlets, INVENT_URL):
             dec_btn.addEventListener("click", cp(on_dec))
 
             container = div(dec_btn, display, inc_btn)
-            container.style["font-family"] = "sans-serif"
-            container.style["display"] = "flex"
-            container.style["align-items"] = "center"
-            container.style["gap"] = "12px"
-            container.style["padding"] = "12px"
+            container.style.setProperty("font-family", "sans-serif")
+            container.style.setProperty("display", "flex")
+            container.style.setProperty("align-items", "center")
+            container.style.setProperty("gap", "12px")
+            container.style.setProperty("padding", "12px")
             el.appendChild(container)
 
     mo.ui.anywidget(CounterCompat())
@@ -413,11 +413,11 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
             # Colour swatch — a Label element styled as a coloured box
             rv, gv, bv = model.get("r"), model.get("g"), model.get("b")
             swatch = Label(text="")
-            swatch.element.style["background-color"] = f"rgb({rv},{gv},{bv})"
-            swatch.element.style["width"] = "100px"
-            swatch.element.style["height"] = "100px"
-            swatch.element.style["border-radius"] = "8px"
-            swatch.element.style["border"] = "1px solid #ccc"
+            swatch.element.style.setProperty("background-color", f"rgb({rv},{gv},{bv})")
+            swatch.element.style.setProperty("width", "100px")
+            swatch.element.style.setProperty("height", "100px")
+            swatch.element.style.setProperty("border-radius", "8px")
+            swatch.element.style.setProperty("border", "1px solid #ccc")
 
             def make_channel(name, trait):
                 lbl = Label(text=f"{name}: {model.get(trait)}")
@@ -431,7 +431,7 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
                     r = model.get("r")
                     g = model.get("g")
                     b = model.get("b")
-                    swatch.element.style["background-color"] = f"rgb({r},{g},{b})"
+                    swatch.element.style.setProperty("background-color", f"rgb({r},{g},{b})")
 
                 slider.element.addEventListener("input", create_proxy(on_input))
                 return Column(children=[lbl, slider])
