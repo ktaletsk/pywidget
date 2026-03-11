@@ -460,6 +460,129 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
 def _(mo):
     mo.md("""
     ---
+    ## Part 4: Level 3 — Invent Controls + numpy + matplotlib
+
+    **Mixing data science packages with Invent — and nothing else.**
+
+    `_py_packages` can combine Invent *and* scientific packages in the same
+    Pyodide instance. Here `numpy` generates the data, `matplotlib` renders
+    the chart, and the Invent `Image` widget displays it — updated reactively
+    via `chart.image = new_data_uri`.
+
+    ### Example 4: Distribution Explorer
+
+    A `Selector` dropdown picks the distribution; an Invent `Slider` controls
+    the sample size; a `Button` resamples. `chart.image = …` triggers Invent's
+    reactive `on_image_changed` → `element.src =` automatically — no DOM, no
+    `create_proxy`, no raw JavaScript (except the one `Slider` DOM listener
+    noted in Example 3b).
+
+    > **Key insight:** `Image.image` accepts any valid `src` string, including
+    > `data:image/png;base64,…` URIs — so matplotlib output slots straight in.
+    """)
+    return
+
+
+@app.cell
+def _(PyWidget, mo, traitlets, INVENT_URL):
+    class DistributionExplorer(PyWidget):
+        """Matplotlib histogram controlled entirely by Invent widgets."""
+        _py_packages = [INVENT_URL, "numpy", "matplotlib"]
+        distribution = traitlets.Unicode("normal").tag(sync=True)
+        n = traitlets.Int(500).tag(sync=True)
+
+        def render(self, el, model):
+            import numpy as np
+            import matplotlib
+            matplotlib.use("agg")
+            import matplotlib.pyplot as plt
+            import io, base64
+            from invent.ui import Selector, Button, Image, Slider, Label, Row, Column
+            from pyodide.ffi import create_proxy
+
+            DISTS = ["normal", "uniform", "exponential", "lognormal"]
+
+            def sample(dist, n):
+                rng = np.random.default_rng()
+                return {
+                    "normal":      lambda: rng.normal(size=n),
+                    "uniform":     lambda: rng.uniform(-3, 3, size=n),
+                    "exponential": lambda: rng.exponential(size=n),
+                    "lognormal":   lambda: rng.lognormal(size=n),
+                }[dist]()
+
+            def to_data_uri(data, dist):
+                fig, ax = plt.subplots(figsize=(6, 3))
+                ax.hist(data, bins=20, color="#4e79a7",
+                        edgecolor="white", linewidth=0.6)
+                ax.set_title(f"{dist.capitalize()} (n={len(data)})",
+                             fontsize=12, color="#333")
+                ax.spines["top"].set_visible(False)
+                ax.spines["right"].set_visible(False)
+                fig.tight_layout()
+                buf = io.BytesIO()
+                fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+                plt.close(fig)
+                return ("data:image/png;base64,"
+                        + base64.b64encode(buf.getvalue()).decode())
+
+            # controls
+            dist_sel = Selector(choices=DISTS, value=model.get("distribution"))
+            resample_btn = Button(text="↺ Resample", purpose="PRIMARY")
+
+            init_n = model.get("n")
+            n_label = Label(text=f"n = {init_n}")
+            n_slider = Slider(value=init_n, minvalue=100, maxvalue=5000)
+
+            # chart — Image widget, updated via chart.image = new_data_uri
+            init_data = sample(model.get("distribution"), init_n)
+            chart = Image(image=to_data_uri(init_data, model.get("distribution")))
+
+            def compute():
+                n = int(n_slider.value)
+                dist = dist_sel.value
+                data = sample(dist, n)
+                chart.image = to_data_uri(data, dist)  # reactive update
+                model.set("distribution", dist)
+                model.set("n", n)
+                model.save_changes()
+
+            def on_slider_input(event):
+                n_label.text = f"n = {int(n_slider.value)}"
+                compute()
+
+            n_slider.element.addEventListener("input", create_proxy(on_slider_input))
+
+            @dist_sel.when("changed")
+            def _(message): compute()
+
+            @resample_btn.when("press")
+            def _(message): compute()
+
+            el.appendChild(Column(children=[
+                Row(children=[dist_sel, resample_btn]),
+                Row(children=[n_slider, n_label]),
+                chart,
+            ]).element)
+
+    histogram = mo.ui.anywidget(DistributionExplorer())
+    histogram
+    return (histogram,)
+
+
+@app.cell(hide_code=True)
+def _(histogram, mo):
+    mo.md(f"""
+    Synced to kernel — distribution: `{histogram.widget.distribution}`,
+    n: `{histogram.widget.n}`
+    """)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md("""
+    ---
     ## Summary: Before vs After
 
     | | Before (raw DOM) | After (Invent) |
@@ -509,120 +632,6 @@ def _(mo):
     cd invent
     git diff main..pyodide-compat
     ```
-    """)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md("""
-    ---
-    ## Part 4: Level 3 — Invent Controls + numpy + matplotlib
-
-    **Mixing data science packages with Invent — and nothing else.**
-
-    `_py_packages` can combine Invent *and* scientific packages in the same
-    Pyodide instance. Here `numpy` generates the data, `matplotlib` renders
-    the chart, and the Invent `Image` widget displays it — updated reactively
-    via `chart.image = new_data_uri`.
-
-    ### Example 4: Distribution Explorer
-
-    Two `Selector` dropdowns and a `Button` control a live matplotlib histogram.
-    `chart.image = …` triggers Invent's reactive `on_image_changed` → `element.src =`
-    automatically — no DOM, no `create_proxy`, no raw JavaScript.
-
-    > **Key insight:** `Image.image` accepts any valid `src` string, including
-    > `data:image/png;base64,…` URIs — so matplotlib output slots straight in.
-    """)
-    return
-
-
-@app.cell
-def _(PyWidget, mo, traitlets, INVENT_URL):
-    class DistributionExplorer(PyWidget):
-        """Matplotlib histogram controlled entirely by Invent widgets."""
-        _py_packages = [INVENT_URL, "numpy", "matplotlib"]
-        distribution = traitlets.Unicode("normal").tag(sync=True)
-        n = traitlets.Int(500).tag(sync=True)
-
-        def render(self, el, model):
-            import numpy as np
-            import matplotlib
-            matplotlib.use("agg")
-            import matplotlib.pyplot as plt
-            import io, base64
-            from invent.ui import Selector, Button, Image, Row, Column
-
-            DISTS = ["normal", "uniform", "exponential", "lognormal"]
-            SIZES = ["200", "500", "2000", "5000"]
-
-            def sample(dist, n):
-                rng = np.random.default_rng()
-                return {
-                    "normal":      lambda: rng.normal(size=n),
-                    "uniform":     lambda: rng.uniform(-3, 3, size=n),
-                    "exponential": lambda: rng.exponential(size=n),
-                    "lognormal":   lambda: rng.lognormal(size=n),
-                }[dist]()
-
-            def to_data_uri(data, dist):
-                fig, ax = plt.subplots(figsize=(6, 3))
-                ax.hist(data, bins=20, color="#4e79a7",
-                        edgecolor="white", linewidth=0.6)
-                ax.set_title(f"{dist.capitalize()} (n={len(data)})",
-                             fontsize=12, color="#333")
-                ax.spines["top"].set_visible(False)
-                ax.spines["right"].set_visible(False)
-                fig.tight_layout()
-                buf = io.BytesIO()
-                fig.savefig(buf, format="png", dpi=110, bbox_inches="tight")
-                plt.close(fig)
-                return ("data:image/png;base64,"
-                        + base64.b64encode(buf.getvalue()).decode())
-
-            # controls
-            dist_sel = Selector(choices=DISTS, value=model.get("distribution"))
-            size_sel = Selector(choices=SIZES, value="500")
-            resample_btn = Button(text="↺ Resample", purpose="PRIMARY")
-
-            # chart — Image widget, updated via chart.image = new_data_uri
-            init_data = sample(model.get("distribution"), model.get("n"))
-            chart = Image(image=to_data_uri(init_data, model.get("distribution")))
-
-            def compute():
-                n = int(size_sel.value)
-                dist = dist_sel.value
-                data = sample(dist, n)
-                chart.image = to_data_uri(data, dist)  # reactive update
-                model.set("distribution", dist)
-                model.set("n", n)
-                model.save_changes()
-
-            @dist_sel.when("changed")
-            def _(message): compute()
-
-            @size_sel.when("changed")
-            def _(message): compute()
-
-            @resample_btn.when("press")
-            def _(message): compute()
-
-            el.appendChild(Column(children=[
-                Row(children=[dist_sel, size_sel, resample_btn]),
-                chart,
-            ]).element)
-
-    histogram = mo.ui.anywidget(DistributionExplorer())
-    histogram
-    return (histogram,)
-
-
-@app.cell(hide_code=True)
-def _(histogram, mo):
-    mo.md(f"""
-    Synced to kernel — distribution: `{histogram.widget.distribution}`,
-    n: `{histogram.widget.n}`
     """)
     return
 
