@@ -40,7 +40,7 @@ def _(mo):
     ```python
     INVENT_URL = (
         "https://cdn.jsdelivr.net/gh/ktaletsk/invent"
-        "@899391b7b58f4c64d1ab21492d2ac1393cf29c0c"
+        "@282cf507379eac1cea3fdf84fbdeb82764cf46c1"
         "/dist/invent-0.0.1a2-py3-none-any.whl"
     )
     ```
@@ -64,7 +64,7 @@ def _():
 
     INVENT_URL = (
         "https://cdn.jsdelivr.net/gh/ktaletsk/invent"
-        "@899391b7b58f4c64d1ab21492d2ac1393cf29c0c"
+        "@282cf507379eac1cea3fdf84fbdeb82764cf46c1"
         "/dist/invent-0.0.1a2-py3-none-any.whl"
     )
     return PyWidget, mo, traitlets, INVENT_URL
