@@ -49,9 +49,6 @@ def _(mo):
     (which sets the required `Access-Control-Allow-Origin: *` header).
     Installation is **cached per Pyodide instance** — subsequent widgets on the same
     page do not re-download.
-
-    **First cell load:** ~15–20 s (Pyodide + Invent download).
-    **Subsequent cells:** instant (both cached).
     """)
     return
 
