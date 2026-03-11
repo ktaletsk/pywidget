@@ -538,8 +538,9 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
             resample_btn = Button(text="↺ Resample", purpose="PRIMARY",
                                   size="LARGE")
             _s(resample_btn,
-               font_size="15px", padding="8px 18px",
-               border_radius="6px", cursor="pointer")
+               font_size="16px", padding="10px 24px",
+               border="2px solid #2a5a8a", border_radius="6px",
+               cursor="pointer", font_weight="600")
 
             init_n = model.get("n")
             n_label = Label(text=f"n = {init_n}")
