@@ -517,163 +517,106 @@ def _(mo):
 def _(mo):
     mo.md("""
     ---
-    ## Part 4: Level 3 — Invent Controls + numpy/matplotlib
+    ## Part 4: Level 3 — Invent Controls + numpy
 
-    **Adding a real data science dependency to the frontend.**
+    **Mixing a data science package with Invent — nothing else.**
 
-    `_py_packages` can mix Invent *and* scientific packages — both run inside the
-    same Pyodide instance. Here `numpy` generates the data and `matplotlib`
-    renders it as an SVG, while Invent `Slider` and `Selector` provide the
-    controls — with no HTML at all in the widget code.
+    `_py_packages` can combine Invent *and* scientific packages in the same
+    Pyodide instance. Here `numpy` does the computation and every piece of UI
+    is an Invent widget — no HTML, no DOM, no `create_proxy`.
 
-    ### Example 4: Histogram Explorer
+    ### Example 4: Distribution Explorer
 
-    - `Selector` picks the distribution (normal / uniform / exponential / lognormal)
-    - `Slider` controls the number of bins
-    - `Button` resamples (draws a new random dataset)
+    Two `Selector` dropdowns and a `Button` control a live text histogram
+    built entirely from `Label` widgets in a `Column`. Every bar is a Label;
+    `label.text = …` updates it — no redraw, no re-render.
 
-    The chart re-renders on every control change entirely in Pyodide — the kernel
-    only receives the final summary statistics via traitlets.
-
-    > **New Invent widget used here:** `Selector` — a dropdown that publishes a
-    > `"changed"` message when the selection changes, so `@selector.when("changed")`
-    > works exactly like `@button.when("press")`.
+    > **Invent widgets used:** `Selector` (publishes `"changed"` → `@sel.when("changed")`),
+    > `Button`, `Label`, `Row`, `Column` — all clean event wiring, zero raw DOM.
     """)
     return
 
 
 @app.cell
 def _(PyWidget, mo, traitlets, INVENT_URL):
-    import json as _json
-
-    class HistogramExplorer(PyWidget):
-        """Histogram explorer: numpy data + matplotlib chart + Invent controls."""
-        _py_packages = [INVENT_URL, "numpy", "matplotlib"]
+    class DistributionExplorer(PyWidget):
+        """Text histogram: numpy computation, Invent controls and display."""
+        _py_packages = [INVENT_URL, "numpy"]
         distribution = traitlets.Unicode("normal").tag(sync=True)
-        bins = traitlets.Int(20).tag(sync=True)
-        stats_json = traitlets.Unicode("{}").tag(sync=True)
+        n = traitlets.Int(500).tag(sync=True)
 
         def render(self, el, model):
             import numpy as np
-            import matplotlib
-            matplotlib.use("agg")
-            import matplotlib.pyplot as plt
-            import io, base64
-            from invent.ui import Button, Label, Slider, Selector, Column, Row
+            from invent.ui import Selector, Button, Label, Row, Column
 
-            # ── helpers ──────────────────────────────────────────────────────
-            def sample(dist, n=500, seed=None):
-                rng = np.random.default_rng(seed)
-                if dist == "normal":
-                    return rng.normal(loc=0, scale=1, size=n)
-                elif dist == "uniform":
-                    return rng.uniform(low=-3, high=3, size=n)
-                elif dist == "exponential":
-                    return rng.exponential(scale=1, size=n)
-                else:  # lognormal
-                    return rng.lognormal(mean=0, sigma=0.5, size=n)
+            DISTS = ["normal", "uniform", "exponential", "lognormal"]
+            SIZES = ["200", "500", "2 000", "5 000"]
+            N_BINS = 14
+            BAR_WIDTH = 28
 
-            def render_chart(data, n_bins, dist):
-                fig, ax = plt.subplots(figsize=(6, 3))
-                ax.hist(data, bins=n_bins, color="#4e79a7",
-                        edgecolor="white", linewidth=0.6)
-                ax.set_title(f"{dist.capitalize()} distribution  (n=500)",
-                             fontsize=12, color="#333")
-                ax.set_xlabel("Value")
-                ax.set_ylabel("Count")
-                ax.spines["top"].set_visible(False)
-                ax.spines["right"].set_visible(False)
-                fig.tight_layout()
-                buf = io.BytesIO()
-                fig.savefig(buf, format="png", dpi=110, bbox_inches="tight")
-                plt.close(fig)
-                return base64.b64encode(buf.getvalue()).decode()
+            def sample(dist, n):
+                rng = np.random.default_rng()
+                return {
+                    "normal":      lambda: rng.normal(size=n),
+                    "uniform":     lambda: rng.uniform(-3, 3, size=n),
+                    "exponential": lambda: rng.exponential(size=n),
+                    "lognormal":   lambda: rng.lognormal(size=n),
+                }[dist]()
 
-            def update_stats(data):
-                import json
-                s = {
-                    "mean": round(float(data.mean()), 3),
-                    "std": round(float(data.std()), 3),
-                    "min": round(float(data.min()), 3),
-                    "max": round(float(data.max()), 3),
-                }
-                model.set("stats_json", json.dumps(s))
-                model.set("distribution", dist_selector.value)
-                model.set("bins", int(bins_slider.value))
-                model.save_changes()
-                return s
+            # controls
+            dist_sel = Selector(choices=DISTS, value=model.get("distribution"))
+            size_sel = Selector(choices=SIZES, value="500")
+            resample_btn = Button(text="↺ Resample", purpose="PRIMARY")
 
-            # ── state ─────────────────────────────────────────────────────────
-            state = {"data": sample(model.get("distribution"))}
+            # display: one Label per bin + one summary Label
+            bin_labels = [Label(text="") for _ in range(N_BINS)]
+            summary = Label(text="")
 
-            # ── chart element (plain DOM img — not an Invent widget) ──────────
-            from js import document
-            img = document.createElement("img")
-            img.style.setProperty("max-width", "100%")
-            b64 = render_chart(state["data"], model.get("bins"),
-                               model.get("distribution"))
-            img.src = f"data:image/png;base64,{b64}"
-
-            # ── Invent controls ───────────────────────────────────────────────
-            dist_selector = Selector(
-                choices=["normal", "uniform", "exponential", "lognormal"],
-                value=model.get("distribution"),
-            )
-            bins_label = Label(text=f"Bins: {model.get('bins')}")
-            bins_slider = Slider(
-                value=model.get("bins"), minvalue=5, maxvalue=80,
-            )
-            resample_btn = Button(text="Resample", purpose="PRIMARY")
-            stats_label = Label(text="")
-
-            def refresh(data=None):
-                if data is None:
-                    data = state["data"]
-                n_bins = int(bins_slider.value)
-                dist = dist_selector.value
-                b64 = render_chart(data, n_bins, dist)
-                img.src = f"data:image/png;base64,{b64}"
-                s = update_stats(data)
-                stats_label.text = (
-                    f"mean={s['mean']}  std={s['std']}  "
-                    f"min={s['min']}  max={s['max']}"
+            def compute():
+                n = int(size_sel.value.replace("\u202f", "").replace(" ", ""))
+                dist = dist_sel.value
+                data = sample(dist, n)
+                counts, edges = np.histogram(data, bins=N_BINS)
+                peak = counts.max()
+                for lbl, count, lo, hi in zip(bin_labels, counts, edges, edges[1:]):
+                    bar = "█" * int(count / peak * BAR_WIDTH)
+                    lbl.text = f"{lo:+6.2f} … {hi:+6.2f}  {bar}  {count}"
+                summary.text = (
+                    f"n={n}  mean={data.mean():.3f}  "
+                    f"std={data.std():.3f}  "
+                    f"[{data.min():.3f}, {data.max():.3f}]"
                 )
-                bins_label.text = f"Bins: {n_bins}"
+                model.set("distribution", dist)
+                model.set("n", n)
+                model.save_changes()
 
-            @dist_selector.when("changed")
-            def on_dist(message):
-                state["data"] = sample(dist_selector.value)
-                refresh(state["data"])
+            @dist_sel.when("changed")
+            def _(message): compute()
+
+            @size_sel.when("changed")
+            def _(message): compute()
 
             @resample_btn.when("press")
-            def on_resample(message):
-                state["data"] = sample(dist_selector.value)
-                refresh(state["data"])
+            def _(message): compute()
 
-            from pyodide.ffi import create_proxy
-            bins_slider.element.addEventListener(
-                "input", create_proxy(lambda e: refresh()))
+            compute()
 
-            controls = Row(children=[dist_selector, bins_label, bins_slider,
-                                     resample_btn])
-            layout = Column(children=[controls, stats_label])
+            el.appendChild(Column(children=[
+                Row(children=[dist_sel, size_sel, resample_btn]),
+                *bin_labels,
+                summary,
+            ]).element)
 
-            el.appendChild(img)
-            el.appendChild(layout.element)
-            refresh()
-
-    histogram = mo.ui.anywidget(HistogramExplorer())
+    histogram = mo.ui.anywidget(DistributionExplorer())
     histogram
     return (histogram,)
 
 
 @app.cell(hide_code=True)
 def _(histogram, mo):
-    import json as _json2
-    _stats = _json2.loads(histogram.widget.stats_json or "{}")
     mo.md(f"""
-    Stats synced to kernel: **mean={_stats.get('mean', '—')}  std={_stats.get('std', '—')}**
-    (distribution: `{histogram.widget.distribution}`, bins: `{histogram.widget.bins}`)
+    Synced to kernel — distribution: `{histogram.widget.distribution}`,
+    n: `{histogram.widget.n}`
     """)
     return
 
