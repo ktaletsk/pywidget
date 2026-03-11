@@ -9,10 +9,19 @@ app = marimo.App(width="medium")
 
 @app.cell(hide_code=True)
 def _(mo):
+    _logos = mo.Html(
+        '<a href="https://github.com/ktaletsk/pywidget">'
+        '<img src="https://raw.githubusercontent.com/ktaletsk/pywidget/main/favicon.svg"'
+        ' width="48" style="vertical-align:middle"/></a>'
+        '&nbsp;&nbsp;<strong style="font-size:1.4em">+</strong>&nbsp;&nbsp;'
+        '<a href="https://inventframework.org/">'
+        '<img src="https://raw.githubusercontent.com/invent-framework/invent-framework.github.io/main/assets/img/hat.svg"'
+        ' width="48" style="vertical-align:middle"/></a>'
+    )
     mo.md(f"""
     # pywidget + Invent: Pythonic Widgets Without HTML
 
-    <a href="https://github.com/ktaletsk/pywidget"><img src="https://raw.githubusercontent.com/ktaletsk/pywidget/main/favicon.svg" width="48" /></a>&nbsp;&nbsp;**+**&nbsp;&nbsp;<a href="https://inventframework.org/"><img src="https://raw.githubusercontent.com/invent-framework/invent-framework.github.io/main/assets/img/hat.svg" width="48" /></a>
+    {_logos}
 
     **The problem pywidget solves:** You can write widget rendering logic in Python —
     no JavaScript required.
