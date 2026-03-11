@@ -523,13 +523,33 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
                 return ("data:image/png;base64,"
                         + base64.b64encode(buf.getvalue()).decode())
 
+            def _s(widget, **props):
+                """Apply inline CSS to any Invent widget's element."""
+                for k, v in props.items():
+                    widget.element.style.setProperty(k.replace("_", "-"), v)
+
             # controls
             dist_sel = Selector(choices=DISTS, value=model.get("distribution"))
-            resample_btn = Button(text="↺ Resample", purpose="PRIMARY")
+            _s(dist_sel,
+               font_size="15px", padding="8px 12px",
+               border="1px solid #bbb", border_radius="6px",
+               background="white", cursor="pointer", min_width="160px")
+
+            resample_btn = Button(text="↺ Resample", purpose="PRIMARY",
+                                  size="LARGE")
+            _s(resample_btn,
+               font_size="15px", padding="8px 18px",
+               border_radius="6px", cursor="pointer")
 
             init_n = model.get("n")
             n_label = Label(text=f"n = {init_n}")
+            _s(n_label,
+               font_size="15px", font_weight="600",
+               min_width="90px", line_height="2")
+
             n_slider = Slider(value=init_n, minvalue=100, maxvalue=5000)
+            _s(n_slider,
+               width="280px", accent_color="#4e79a7", cursor="pointer")
 
             # chart — Image widget, updated via chart.image = new_data_uri
             init_data = sample(model.get("distribution"), init_n)
