@@ -254,7 +254,7 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
             from invent.ui import Button, Label, Row
 
             dec_btn = Button(text="−")
-            label = Label(str(model.get("count")))
+            label = Label(text=str(model.get("count")))
             inc_btn = Button(text="+")
 
             @inc_btn.when("press")
@@ -315,7 +315,7 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
             from invent.ui import Slider, Label, Column
             from pyodide.ffi import create_proxy
 
-            label = Label(f"Value: {model.get('value')}")
+            label = Label(text=f"Value: {model.get('value')}")
             slider = Slider(
                 value=model.get("value"),
                 minvalue=0,
@@ -369,7 +369,7 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
 
             name_input = TextInput(placeholder="Enter your name…")
             greet_btn = Button(text="Greet", purpose="PRIMARY")
-            output = Label("")
+            output = Label(text="")
 
             @greet_btn.when("press")
             def on_greet(message):
@@ -421,7 +421,7 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
 
             # Colour swatch — a Label element styled as a coloured box
             rv, gv, bv = model.get("r"), model.get("g"), model.get("b")
-            swatch = Label("")
+            swatch = Label(text="")
             swatch.element.style.setProperty("background-color", f"rgb({rv},{gv},{bv})")
             swatch.element.style.setProperty("width", "100px")
             swatch.element.style.setProperty("height", "100px")
@@ -429,7 +429,7 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
             swatch.element.style.setProperty("border", "1px solid #ccc")
 
             def make_channel(name, trait):
-                lbl = Label(f"{name}: {model.get(trait)}")
+                lbl = Label(text=f"{name}: {model.get(trait)}")
                 slider = Slider(value=model.get(trait), minvalue=0, maxvalue=255)
 
                 def on_input(event):
@@ -464,7 +464,7 @@ def _(mo):
 
     | | Before (raw DOM) | After (Invent) |
     |---|---|---|
-    | **Rendering** | `el.innerHTML = f\"\"\"...\"\"\"` | `Button(text=…)`, `Label("…")` |
+    | **Rendering** | `el.innerHTML = f\"\"\"...\"\"\"` | `Button(text=…)`, `Label(text="…")` |
     | **Finding elements** | `el.querySelector(\"#id\")` | Direct Python variable |
     | **Event handling** | `addEventListener(\"click\", create_proxy(fn))` | `@btn.when(\"press\")` |
     | **Updating UI** | `el.querySelector(\"#display\").textContent = …` | `label.text = …` |
