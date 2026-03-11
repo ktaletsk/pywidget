@@ -223,6 +223,17 @@ def _(mo):
     Invent's reactive property system means setting `label.text = "new value"`
     directly updates the DOM — no `querySelector`, no `textContent` assignment needed.
 
+    > **Note on event handling:** In a full Invent app, widgets communicate via
+    > named **channels** using a global PubSub bus:
+    > ```python
+    > invent.subscribe(handler, to_channel="my_channel", when_subject=["press"])
+    > ```
+    > and widgets are given a `channel=` kwarg to publish to. In a pywidget context
+    > there is no global `invent.App`, so we use the `.when()` convenience shortcut
+    > instead — it wires a handler directly to one widget's channel without needing
+    > a global subscription. This is simpler here but bypasses the DataStore / reactive
+    > state system that makes Invent apps truly reactive.
+
     ### Example 3a: Counter (Button + Label + Row)
 
     Same counter, now with Invent `Button`, `Label`, and `Row`.
@@ -240,12 +251,10 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
         count = traitlets.Int(0).tag(sync=True)
 
         def render(self, el, model):
-            from invent.ui.widgets.button import Button
-            from invent.ui.widgets.label import Label
-            from invent.ui.containers.row import Row
+            from invent.ui import Button, Label, Row
 
             dec_btn = Button(text="−")
-            label = Label(text=str(model.get("count")))
+            label = Label(str(model.get("count")))
             inc_btn = Button(text="+")
 
             @inc_btn.when("press")
@@ -285,8 +294,12 @@ def _(mo):
 
     `Slider` is an Invent widget wrapping an HTML range input.
     It updates its `.value` property on user interaction.
-    A DOM `input` event listener on `slider.element` updates the `Label` and
-    syncs the value to the kernel traitlet.
+
+    > **Design gap:** `Slider` handles its DOM `input` event internally to update
+    > `slider.value`, but does **not** publish an Invent message. There is no
+    > `@slider.when("change")` equivalent. We fall back to a raw DOM listener on
+    > `slider.element` — the one place where Invent's abstraction doesn't yet reach.
+    > Adding a `"change"` message to `Slider` upstream would eliminate this.
     """)
     return
 
@@ -299,12 +312,10 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
         value = traitlets.Int(50).tag(sync=True)
 
         def render(self, el, model):
-            from invent.ui.widgets.slider import Slider
-            from invent.ui.widgets.label import Label
-            from invent.ui.containers.column import Column
+            from invent.ui import Slider, Label, Column
             from pyodide.ffi import create_proxy
 
-            label = Label(text=f"Value: {model.get('value')}")
+            label = Label(f"Value: {model.get('value')}")
             slider = Slider(
                 value=model.get("value"),
                 minvalue=0,
@@ -354,14 +365,11 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
         greeting = traitlets.Unicode("").tag(sync=True)
 
         def render(self, el, model):
-            from invent.ui.widgets.textinput import TextInput
-            from invent.ui.widgets.button import Button
-            from invent.ui.widgets.label import Label
-            from invent.ui.containers.column import Column
+            from invent.ui import TextInput, Button, Label, Column
 
             name_input = TextInput(placeholder="Enter your name…")
             greet_btn = Button(text="Greet", purpose="PRIMARY")
-            output = Label(text="")
+            output = Label("")
 
             @greet_btn.when("press")
             def on_greet(message):
@@ -408,15 +416,12 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
         b = traitlets.Int(200).tag(sync=True)
 
         def render(self, el, model):
-            from invent.ui.widgets.slider import Slider
-            from invent.ui.widgets.label import Label
-            from invent.ui.containers.column import Column
-            from invent.ui.containers.grid import Grid
+            from invent.ui import Slider, Label, Column, Grid
             from pyodide.ffi import create_proxy
 
             # Colour swatch — a Label element styled as a coloured box
             rv, gv, bv = model.get("r"), model.get("g"), model.get("b")
-            swatch = Label(text="")
+            swatch = Label("")
             swatch.element.style.setProperty("background-color", f"rgb({rv},{gv},{bv})")
             swatch.element.style.setProperty("width", "100px")
             swatch.element.style.setProperty("height", "100px")
@@ -424,7 +429,7 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
             swatch.element.style.setProperty("border", "1px solid #ccc")
 
             def make_channel(name, trait):
-                lbl = Label(text=f"{name}: {model.get(trait)}")
+                lbl = Label(f"{name}: {model.get(trait)}")
                 slider = Slider(value=model.get(trait), minvalue=0, maxvalue=255)
 
                 def on_input(event):
@@ -459,7 +464,7 @@ def _(mo):
 
     | | Before (raw DOM) | After (Invent) |
     |---|---|---|
-    | **Rendering** | `el.innerHTML = f\"\"\"...\"\"\"` | `Button(text=…)`, `Label(text=…)` |
+    | **Rendering** | `el.innerHTML = f\"\"\"...\"\"\"` | `Button(text=…)`, `Label("…")` |
     | **Finding elements** | `el.querySelector(\"#id\")` | Direct Python variable |
     | **Event handling** | `addEventListener(\"click\", create_proxy(fn))` | `@btn.when(\"press\")` |
     | **Updating UI** | `el.querySelector(\"#display\").textContent = …` | `label.text = …` |
@@ -471,6 +476,21 @@ def _(mo):
     - `model.get()` / `model.set()` / `model.save_changes()` for kernel↔browser sync
     - `_py_packages` for installing packages in Pyodide
     - Raw DOM access is still available — Invent does not prevent it
+
+    ### Differences from canonical Invent style
+
+    1. **`.when()` vs `invent.subscribe()`** — canonical Invent apps assign widgets
+       a `channel=` kwarg and subscribe handlers globally via `invent.subscribe()`.
+       Without a global `invent.App`, we use the `.when()` shortcut. This is a
+       deliberate simplification; the PubSub/DataStore system is still intact underneath.
+
+    2. **`Slider` DOM fallback** — `Slider` doesn't publish an Invent message on
+       change, so we attach a raw DOM `input` listener on `slider.element`. Adding
+       a `"change"` subject to `Slider` upstream would close this gap.
+
+    3. **No `invent.App` / `invent.go()`** — lifecycle management (`Page`, `App`,
+       `DataStore`) is replaced by pywidget's `render()` / `update()` pattern and
+       traitlets for kernel sync.
 
     ### Collaboration proposal
 
