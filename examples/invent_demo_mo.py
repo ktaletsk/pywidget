@@ -10,7 +10,7 @@ app = marimo.App(width="medium")
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    # pywidget + Invent: Express Yourself Without HTML
+    # pywidget + Invent: Expressive Notebook Widgets in Python
 
     <img src="https://raw.githubusercontent.com/ktaletsk/pywidget/feat/invent-integration/docs/pywidget_invent_logos.svg" height="48" />
 
