@@ -10,7 +10,7 @@ app = marimo.App(width="medium")
 @app.cell(hide_code=True)
 def _(mo):
     mo.md("""
-    # pywidget + Invent: Pythonic Widgets Without HTML
+    # pywidget + Invent: Express Yourself Without HTML
 
     <img src="https://raw.githubusercontent.com/ktaletsk/pywidget/feat/invent-integration/docs/pywidget_invent_logos.svg" height="48" />
 
@@ -521,7 +521,7 @@ def _(PyWidget, mo, traitlets, INVENT_URL):
                 ax.spines["right"].set_visible(False)
                 fig.tight_layout()
                 buf = io.BytesIO()
-                fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+                fig.savefig(buf, format="png", dpi=300, bbox_inches="tight")
                 plt.close(fig)
                 return ("data:image/png;base64,"
                         + base64.b64encode(buf.getvalue()).decode())
