@@ -224,7 +224,7 @@ def test_version() -> None:
     """pywidget exposes a version string."""
     from pywidget import __version__
 
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.1.1"
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +271,70 @@ def test_extract_method_source_dedents() -> None:
     source = _extract_method_source(Example.render)
     # Should start at column 0, not indented
     assert source.startswith("def render(")
+
+
+def test_extract_triple_quoted_column_zero() -> None:
+    class Example:
+        def render(self, el, model):
+            html = """
+<div>
+  <p>Hello</p>
+</div>
+"""
+            el.innerHTML = html
+
+    source = _extract_method_source(Example.render)
+    assert source.startswith("def render(")
+    assert "self" not in source
+    compile(source, "<test_extract_triple_quoted_column_zero>", "exec")
+
+
+def test_extract_async_triple_quoted() -> None:
+    class Example:
+        async def render(self, el, model):
+            html = """
+<div>
+  <p>Hello</p>
+</div>
+"""
+            el.innerHTML = html
+
+    source = _extract_method_source(Example.render)
+    assert source.startswith("async def render(")
+    assert "self" not in source
+    compile(source, "<test_extract_async_triple_quoted>", "exec")
+
+
+def test_extract_all_indented_triple_quoted() -> None:
+    class Example:
+        def render(self, el, model):
+            html = """
+                <div>
+                  <p>Hello</p>
+                </div>
+            """
+            el.innerHTML = html
+
+    source = _extract_method_source(Example.render)
+    assert source.startswith("def render(")
+    assert "self" not in source
+    compile(source, "<test_extract_all_indented_triple_quoted>", "exec")
+
+
+def test_extract_parenthesized_string() -> None:
+    class Example:
+        def render(self, el, model):
+            html = (
+                "<div>"
+                "<p>Hello</p>"
+                "</div>"
+            )
+            el.innerHTML = html
+
+    source = _extract_method_source(Example.render)
+    assert source.startswith("def render(")
+    assert "self" not in source
+    compile(source, "<test_extract_parenthesized_string>", "exec")
 
 
 # ---------------------------------------------------------------------------

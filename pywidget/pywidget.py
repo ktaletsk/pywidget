@@ -12,7 +12,6 @@ from __future__ import annotations
 import inspect
 import pathlib
 import re
-import textwrap
 
 import traitlets.traitlets as t
 from anywidget import AnyWidget
@@ -38,11 +37,26 @@ def _strip_self_param(source: str) -> str:
 def _extract_method_source(method: object) -> str:
     """Extract a method's source code for browser execution.
 
-    Dedents the source and strips the ``self`` parameter so the resulting
-    code defines a standalone function suitable for ``runPythonAsync()``.
+    Strips the class-body indentation and the ``self`` parameter so the
+    resulting code defines a standalone function suitable for
+    ``runPythonAsync()``.
+
+    Note: ``textwrap.dedent()`` is intentionally avoided because it
+    computes the common indent across *all* non-empty lines. If the
+    method contains a triple-quoted string with lines at column 0,
+    the common indent becomes 0 and nothing is stripped. Instead,
+    strip the indentation of the first line (the ``def`` line) from
+    every line that has that prefix.
     """
     source = inspect.getsource(method)  # type: ignore[arg-type]
-    source = textwrap.dedent(source)
+    first_line = source.split("\n", 1)[0]
+    indent = len(first_line) - len(first_line.lstrip())
+    if indent:
+        prefix = first_line[:indent]
+        source = "\n".join(
+            line[indent:] if line.startswith(prefix) else line
+            for line in source.split("\n")
+        )
     source = _strip_self_param(source)
     return source
 
