@@ -1,0 +1,25 @@
+{
+  "name": "pywidget-bridge",
+  "version": "0.1.1",
+  "description": "Pyodide bridge for pywidget widgets in static MyST Markdown pages",
+  "type": "module",
+  "exports": "./pywidget-bridge.mjs",
+  "files": [
+    "pywidget-bridge.mjs"
+  ],
+  "keywords": [
+    "pywidget",
+    "anywidget",
+    "myst",
+    "pyodide",
+    "jupyter",
+    "webassembly"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ktaletsk/pywidget.git",
+    "directory": "js"
+  },
+  "homepage": "https://github.com/ktaletsk/pywidget"
+}
