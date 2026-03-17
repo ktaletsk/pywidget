@@ -56,10 +56,15 @@ Edit `js/pywidget-bridge.mjs` directly. Test locally by running the MyST example
 
 ```bash
 cd examples/myst
-npx myst start
+npx mystmd start
 ```
 
-The `examples/myst/` pages reference the bridge as `../../js/pywidget-bridge.mjs`.
+`examples/myst/` references the bridge as `../../js/pywidget-bridge.mjs` (local path) for
+development of the bridge itself. The deployed docs site uses the jsDelivr CDN URL.
+
+> **Note:** Use `cdn.jsdelivr.net/npm` (not `esm.sh`) for CDN references. esm.sh serves a shim
+> that re-exports from a relative `/`-path, which `myst start` resolves against `localhost`
+> and 404s. jsDelivr serves the raw file directly and works in both dev and production.
 
 ## Releasing a new Python version (PyPI)
 
@@ -94,15 +99,16 @@ npm login
 
 ### After publishing
 
-Once published, users can reference the bridge by CDN URL instead of a local path:
+Once published, users can reference the bridge by CDN URL instead of a local path.
+Use the **jsDelivr npm CDN** — it serves the raw file without transformation:
 
 ```markdown
-```{anywidget} https://esm.sh/pywidget-bridge@0.1.1/pywidget-bridge.mjs
+```{anywidget} https://cdn.jsdelivr.net/npm/pywidget-bridge@0.1.1/pywidget-bridge.mjs
 { "_py_render": "def render(el, model): ..." }
 ```
 ```
 
-Update `examples/myst/index.md` and the docs site to use the CDN URL after each release.
+Update the docs site to use the jsDelivr URL after each release.
 
 ## Running the demo notebook
 
