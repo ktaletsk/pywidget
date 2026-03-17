@@ -7,4 +7,4 @@ project:
     - file: index.md
 site:
   template: book-theme
-  base_url: /pywidget/myst
+  base_url: https://ktaletsk.github.io/pywidget/myst
