@@ -7,3 +7,4 @@ project:
     - file: index.md
 site:
   template: book-theme
+  base_url: /pywidget/myst

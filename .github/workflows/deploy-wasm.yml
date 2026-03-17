@@ -1,4 +1,4 @@
-name: Deploy WASM demo to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -15,11 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,12 +24,27 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install marimo and pywidget
         run: pip install marimo pywidget anywidget
 
-      - name: Export WASM notebook
+      - name: Export marimo WASM demo
         run: |
-          marimo export html-wasm examples/pywidget_demo_mo.py -o _site --show-code
+          marimo export html-wasm examples/pywidget_demo_mo.py -o _site/marimo --show-code
+
+      - name: Install mystmd
+        run: npm install -g mystmd
+
+      - name: Build MyST examples
+        run: |
+          cd examples/myst
+          myst build --html
+
+      - name: Copy MyST output to _site/myst
+        run: cp -r examples/myst/_build/html _site/myst
 
       - uses: actions/configure-pages@v5
 
@@ -40,5 +52,12 @@ jobs:
         with:
           path: _site
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - uses: actions/deploy-pages@v4
         id: deployment
