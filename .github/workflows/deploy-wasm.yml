@@ -39,6 +39,8 @@ jobs:
         run: npm install -g mystmd
 
       - name: Build MyST examples
+        env:
+          BASE_URL: /pywidget/myst
         run: |
           cd examples/myst
           myst build --html
