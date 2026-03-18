@@ -66,6 +66,11 @@ development of the bridge itself. The deployed docs site uses the jsDelivr CDN U
 > that re-exports from a relative `/`-path, which `myst start` resolves against `localhost`
 > and 404s. jsDelivr serves the raw file directly and works in both dev and production.
 
+> **Note on BASE_URL:** `BASE_URL` is an environment variable, not a `myst.yml` field.
+> It is set in the GitHub Actions workflow (`env: BASE_URL: /pywidget/myst`) so the built
+> site knows it's served at a subpath. Local `myst start` doesn't need it — it serves from
+> `localhost:3000` at the root.
+
 ## Releasing a new Python version (PyPI)
 
 1. Bump `version` in `pyproject.toml`.
