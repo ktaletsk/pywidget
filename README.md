@@ -230,6 +230,44 @@ pywidget is a thin layer on top of anywidget. `PyWidget` subclasses
 Pyodide, runs your Python rendering code in an isolated namespace, and proxies
 the anywidget model API. No modifications to anywidget are needed.
 
+## Static publishing with MyST
+
+pywidget widgets work in [MyST Markdown](https://mystmd.org/) documents via the
+native [`{anywidget}` directive](https://mystmd.org/guide/interactive-notebooks).
+Build once → deploy as plain HTML → readers interact with live Python code
+**without a kernel, a server, or Binder**.
+
+[**→ Live demo**](https://ktaletsk.github.io/pywidget/myst/) — every widget on
+that page runs Pyodide directly in the browser.
+
+To embed a pywidget in a MyST document, pass the `pywidget-bridge` CDN URL as
+the directive argument and supply the initial widget state as JSON:
+
+````markdown
+```{anywidget} https://cdn.jsdelivr.net/npm/pywidget-bridge@0.1.1/pywidget-bridge.mjs
+{
+  "_py_render": "def render(el, model):\n    el.innerHTML = '<b>Hello from Pyodide!</b>'"
+}
+```
+````
+
+Add `_py_packages` to install third-party packages (numpy, scikit-learn, etc.)
+and include traitlet initial values alongside `_py_render`:
+
+````markdown
+```{anywidget} https://cdn.jsdelivr.net/npm/pywidget-bridge@0.1.1/pywidget-bridge.mjs
+{
+  "_py_render": "...",
+  "_py_packages": ["numpy"],
+  "count": 0
+}
+```
+````
+
+This makes pywidget a **publishing tool** — write interactive analyses,
+textbooks, or tutorials in MyST, deploy to GitHub Pages, and ship
+fully self-contained documents that anyone can use without installing anything.
+
 ## Agentic skill
 
 If you use AI coding agent to create pywidgets, we recommend installing our [`skill/`](skill/) that documents how to build widgets correctly.
