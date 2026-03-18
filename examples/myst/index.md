@@ -3,16 +3,15 @@ title: pywidget in MyST
 subtitle: Pure Python widgets running in the browser via Pyodide
 ---
 
-# pywidget + MyST
+<a href="https://github.com/ktaletsk/pywidget">
+  <img src="https://raw.githubusercontent.com/ktaletsk/pywidget/main/favicon.svg" alt="pywidget logo" width="60" />
+</a>
 
-This page demonstrates **pywidget** rendering logic running inside a MyST
-site — no Python kernel required. The Python code executes in the browser
-via [Pyodide](https://pyodide.org/) (CPython compiled to WebAssembly).
-
-:::{note}
-First load takes 3-5 seconds while Pyodide downloads (~11 MB WASM).
-Subsequent widgets on the same page render instantly.
-:::
+[pywidget](https://github.com/ktaletsk/pywidget) lets you write Jupyter widgets **entirely in Python** — no JavaScript
+required. The `render()` and `update()` methods run client-side in
+[Pyodide](https://pyodide.org/) (CPython compiled to WebAssembly), so the same
+widget class works in JupyterLab, Jupyter Notebook, marimo, VS Code, and — as
+this page demonstrates — as a fully static site with no kernel at all.
 
 ## Example 1: Hello World
 
@@ -39,38 +38,39 @@ def render(el, model):
 
 ## Example 2: Interactive Counter
 
-A button that tracks clicks using the widget model for state.
+A button whose count is stored in the **widget model**. `model.on('change:count', …)`
+subscribes to model changes so the label always reflects the current state —
+the same reactivity pattern used by anywidget in JavaScript.
 
 ```{code-block} python
 def render(el, model):
     from js import document
 
-    container = document.createElement('div')
-    container.style.fontFamily = 'sans-serif'
-    container.style.padding = '16px'
-
     btn = document.createElement('button')
     btn.style.cssText = (
         'padding: 10px 24px; font-size: 16px; cursor: pointer;'
         ' border: 2px solid #6366f1; border-radius: 8px;'
-        ' background: #eef2ff; color: #4338ca;'
+        ' background: #eef2ff; color: #4338ca; font-family: sans-serif;'
     )
-    btn.textContent = 'Count: 0'
 
-    count = 0
+    def refresh():
+        btn.textContent = f'Count: {model.get("count")}'
+
     def on_click(event):
-        nonlocal count
-        count += 1
-        btn.textContent = f'Count: {count}'
-    btn.addEventListener('click', create_proxy(on_click))
+        model.set('count', model.get('count') + 1)
+        model.save_changes()
 
-    container.appendChild(btn)
-    el.appendChild(container)
+    model.on('change:count', create_proxy(lambda *_: refresh()))
+    btn.addEventListener('click', create_proxy(on_click))
+    refresh()
+
+    el.style.padding = '16px'
+    el.appendChild(btn)
 ```
 
 ```{anywidget} https://cdn.jsdelivr.net/npm/pywidget-bridge@0.1.1/pywidget-bridge.mjs
 {
-  "_py_render": "def render(el, model):\n    from js import document\n    container = document.createElement('div')\n    container.style.fontFamily = 'sans-serif'\n    container.style.padding = '16px'\n\n    btn = document.createElement('button')\n    btn.style.cssText = 'padding: 10px 24px; font-size: 16px; cursor: pointer; border: 2px solid #6366f1; border-radius: 8px; background: #eef2ff; color: #4338ca;'\n    btn.textContent = 'Count: 0'\n\n    count = 0\n    def on_click(event):\n        nonlocal count\n        count += 1\n        btn.textContent = f'Count: {count}'\n    btn.addEventListener('click', create_proxy(on_click))\n\n    container.appendChild(btn)\n    el.appendChild(container)",
+  "_py_render": "def render(el, model):\n    from js import document\n\n    btn = document.createElement('button')\n    btn.style.cssText = 'padding: 10px 24px; font-size: 16px; cursor: pointer; border: 2px solid #6366f1; border-radius: 8px; background: #eef2ff; color: #4338ca; font-family: sans-serif;'\n\n    def refresh():\n        btn.textContent = f'Count: {model.get(\"count\")}'\n\n    def on_click(event):\n        model.set('count', model.get('count') + 1)\n        model.save_changes()\n\n    model.on('change:count', create_proxy(lambda *_: refresh()))\n    btn.addEventListener('click', create_proxy(on_click))\n    refresh()\n\n    el.style.padding = '16px'\n    el.appendChild(btn)",
   "count": 0
 }
 ```
@@ -124,9 +124,9 @@ Pyodide supports 250+ packages from the scientific Python ecosystem via
 `_py_packages` and they will be installed before your `render()` runs.
 
 :::{note}
-The first widget that uses a package will trigger an install (a few seconds).
-Subsequent widgets on the same page reuse the already-loaded package — no
-re-download.
+The first widget on a page triggers a one-time Pyodide download (~11 MB WASM, 3–5 seconds).
+The first widget that uses a third-party package also triggers an install (a few seconds).
+Everything is cached — subsequent widgets on the same page render instantly.
 :::
 
 ## Example 4: Mandelbrot Set (numpy + Pillow)
