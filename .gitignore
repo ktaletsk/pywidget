@@ -26,3 +26,4 @@ _build/
 # Editor / OS
 .DS_Store
 .claude/
+CLAUDE.md
